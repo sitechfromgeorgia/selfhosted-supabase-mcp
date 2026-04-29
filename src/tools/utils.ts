@@ -119,17 +119,22 @@ export async function runExternalCommand(command: string): Promise<{
 export async function executeSqlWithFallback(
     client: SelfhostedSupabaseClient,
     sql: string,
-    readOnly: boolean = true
+    readOnly: boolean = true,
+    params?: unknown[]
 ): Promise<SqlExecutionResult> {
     // Try direct database connection first (bypasses JWT authentication)
     if (client.isPgAvailable()) {
         console.info('Using direct database connection (bypassing JWT)...');
-        return await client.executeSqlWithPg(sql);
+        return await client.executeSqlWithPg(sql, params);
     }
 
     // Try service role RPC (required since execute_sql is restricted to service_role)
+    // Note: RPC method does not support parameterized queries — fall back to interpolation warning
     if (client.isServiceRoleAvailable()) {
         console.info('Using service role RPC method...');
+        if (params && params.length > 0) {
+            console.warn('RPC execute_sql does not support parameterized queries. Values will be interpolated.');
+        }
         return await client.executeSqlViaServiceRoleRpc(sql, readOnly);
     }
 

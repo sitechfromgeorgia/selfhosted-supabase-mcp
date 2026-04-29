@@ -243,7 +243,7 @@ export class SelfhostedSupabaseClient {
      * NOTE: Does not support transactions or parameterization directly.
      * Consider executeTransactionWithPg for more complex operations.
      */
-    public async executeSqlWithPg(query: string): Promise<SqlExecutionResult> {
+    public async executeSqlWithPg(query: string, params?: unknown[]): Promise<SqlExecutionResult> {
         if (!this.options.databaseUrl) {
             return { error: { message: 'DATABASE_URL is not configured. Cannot execute SQL directly.', code: 'MCP_CONFIG_ERROR' } };
         }
@@ -256,7 +256,7 @@ export class SelfhostedSupabaseClient {
         try {
             client = await this.pgPool.connect();
             console.error(`Executing via pg: ${query.substring(0, 100)}...`);
-            const result = await client.query(query);
+            const result = params ? await client.query(query, params) : await client.query(query);
             // Return result in a format consistent with SqlSuccessResponse
             // Assuming result.rows is the desired data array
             return result.rows as SqlSuccessResponse;
@@ -470,6 +470,45 @@ export class SelfhostedSupabaseClient {
      */
     public isServiceRoleAvailable(): boolean {
         return this.supabaseServiceRole !== null;
+    }
+
+    /**
+     * Gets the service role Supabase client for privileged storage/auth operations.
+     * Returns null if service role key is not configured.
+     */
+    public getServiceRoleClient(): SupabaseClient | null {
+        return this.supabaseServiceRole;
+    }
+
+    /**
+     * Performs a lightweight health check by verifying database connectivity.
+     * Returns true if the database is reachable, false otherwise.
+     */
+    public async healthCheck(): Promise<boolean> {
+        if (!this.pgPool) return false;
+        let client: PoolClient | undefined;
+        try {
+            client = await this.pgPool.connect();
+            await client.query('SELECT 1');
+            return true;
+        } catch {
+            return false;
+        } finally {
+            client?.release();
+        }
+    }
+
+    /**
+     * Gracefully closes the pg connection pool if it was initialized.
+     * Should be called during shutdown to prevent connection leaks.
+     */
+    public async close(): Promise<void> {
+        if (this.pgPool) {
+            console.error('Closing pg connection pool...');
+            await this.pgPool.end();
+            this.pgPool = null;
+            console.error('pg connection pool closed.');
+        }
     }
 
 } 

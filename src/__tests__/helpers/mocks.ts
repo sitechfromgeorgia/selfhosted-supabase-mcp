@@ -83,11 +83,11 @@ export function createMockClient(options: MockClientOptions = {}): SelfhostedSup
         supabase: supabaseClient,
 
         executeSqlViaRpc: mock(async (_query: string, _readOnly?: boolean) => rpcResult),
-        executeSqlWithPg: mock(async (_query: string) => pgResult),
+        executeSqlWithPg: mock(async (_query: string, _params?: unknown[]) => pgResult),
         executeSqlViaServiceRoleRpc: mock(async (_query: string, _readOnly?: boolean) => serviceRoleRpcResult),
         executeTransactionWithPg: mock(async <T>(callback: (client: unknown) => Promise<T>) => {
             const mockPgClient = {
-                query: mock(() => Promise.resolve({ rows: [] })),
+                query: mock((_sql: string, _params?: unknown[]) => Promise.resolve({ rows: [] })),
             };
             return callback(mockPgClient);
         }),

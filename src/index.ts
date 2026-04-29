@@ -26,8 +26,8 @@ import { deleteAuthUserTool } from './tools/delete_auth_user.js';
 import { createAuthUserTool } from './tools/create_auth_user.js';
 import { updateAuthUserTool } from './tools/update_auth_user.js';
 import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
 import { canAccessTool, type ToolContext, type ToolPrivilegeLevel, type UserContext } from './tools/types.js';
+import type { AppTool } from './tools/define-tool.js';
 import listStorageBucketsTool from './tools/list_storage_buckets.js';
 import listStorageObjectsTool from './tools/list_storage_objects.js';
 import listRealtimePublicationsTool from './tools/list_realtime_publications.js';
@@ -55,6 +55,91 @@ import { listEdgeFunctionLogsTool } from './tools/list_edge_function_logs.js';
 import { getIndexStatsTool } from './tools/get_index_stats.js';
 import { getVectorIndexStatsTool } from './tools/get_vector_index_stats.js';
 import { explainQueryTool } from './tools/explain_query.js';
+import { createTableTool } from './tools/create_table.js';
+import { alterTableTool } from './tools/alter_table.js';
+import { dropTableTool } from './tools/drop_table.js';
+import { createIndexTool } from './tools/create_index.js';
+import { dropIndexTool } from './tools/drop_index.js';
+import { addForeignKeyTool } from './tools/add_foreign_key.js';
+import { dropForeignKeyTool } from './tools/drop_foreign_key.js';
+import { renameTableTool } from './tools/rename_table.js';
+import { createSchemaTool } from './tools/create_schema.js';
+import { dropSchemaTool } from './tools/drop_schema.js';
+import { createSequenceTool } from './tools/create_sequence.js';
+import { setColumnDefaultTool } from './tools/set_column_default.js';
+import { createStorageBucketTool } from './tools/create_storage_bucket.js';
+import { deleteStorageBucketTool } from './tools/delete_storage_bucket.js';
+import { uploadFileTool } from './tools/upload_file.js';
+import { downloadFileTool } from './tools/download_file.js';
+import { deleteStorageObjectTool } from './tools/delete_storage_object.js';
+import { moveStorageObjectTool } from './tools/move_storage_object.js';
+import { copyStorageObjectTool } from './tools/copy_storage_object.js';
+import { getStorageObjectMetadataTool } from './tools/get_storage_object_metadata.js';
+import { createSignedUrlTool } from './tools/create_signed_url.js';
+import { emptyStorageBucketTool } from './tools/empty_storage_bucket.js';
+import { bulkCreateAuthUsersTool } from './tools/bulk_create_auth_users.js';
+import { bulkDeleteAuthUsersTool } from './tools/bulk_delete_auth_users.js';
+import { bulkUpdateAuthUsersTool } from './tools/bulk_update_auth_users.js';
+import { sendPasswordResetTool } from './tools/send_password_reset.js';
+import { inviteUserTool } from './tools/invite_user.js';
+import { confirmUserEmailTool } from './tools/confirm_user_email.js';
+import { banUserTool } from './tools/ban_user.js';
+import { unbanUserTool } from './tools/unban_user.js';
+import { listUserSessionsTool } from './tools/list_user_sessions.js';
+import { revokeUserSessionsTool } from './tools/revoke_user_sessions.js';
+import { getAuthSettingsTool } from './tools/get_auth_settings.js';
+import { updateAuthSettingsTool } from './tools/update_auth_settings.js';
+import { createRoleTool } from './tools/create_role.js';
+import { listRolesTool } from './tools/list_roles.js';
+import { searchSimilarVectorsTool } from './tools/search_similar_vectors.js';
+import { insertVectorTool } from './tools/insert_vector.js';
+import { createVectorIndexTool } from './tools/create_vector_index.js';
+import { dropVectorIndexTool } from './tools/drop_vector_index.js';
+import { getVectorExtensionStatusTool } from './tools/get_vector_extension_status.js';
+import { optimizeVectorIndexTool } from './tools/optimize_vector_index.js';
+import { deployEdgeFunctionTool } from './tools/deploy_edge_function.js';
+import { updateEdgeFunctionTool } from './tools/update_edge_function.js';
+import { deleteEdgeFunctionTool } from './tools/delete_edge_function.js';
+import { invokeEdgeFunctionTool } from './tools/invoke_edge_function.js';
+import { listEdgeFunctionSecretsTool } from './tools/list_edge_function_secrets.js';
+import { setEdgeFunctionSecretTool } from './tools/set_edge_function_secret.js';
+import { createPublicationTool } from './tools/create_publication.js';
+import { alterPublicationTool } from './tools/alter_publication.js';
+import { dropPublicationTool } from './tools/drop_publication.js';
+import { listRealtimeChannelsTool } from './tools/list_realtime_channels.js';
+import { getRealtimeConfigTool } from './tools/get_realtime_config.js';
+import { createBackupTool } from './tools/create_backup.js';
+import { restoreBackupTool } from './tools/restore_backup.js';
+import { listBackupsTool } from './tools/list_backups.js';
+import { vacuumAnalyzeTool } from './tools/vacuum_analyze.js';
+import { reindexTableTool } from './tools/reindex_table.js';
+import { analyzeTableTool } from './tools/analyze_table.js';
+import { pgTerminateBackendTool } from './tools/pg_terminate_backend.js';
+import { createRlsPolicyTool } from './tools/create_rls_policy.js';
+import { deleteRlsPolicyTool } from './tools/delete_rls_policy.js';
+import { updateRlsPolicyTool } from './tools/update_rls_policy.js';
+import { enableRlsTool } from './tools/enable_rls.js';
+import { disableRlsTool } from './tools/disable_rls.js';
+import { forceRlsTool } from './tools/force_rls.js';
+import { getSlowQueriesTool } from './tools/get_slow_queries.js';
+import { getTableSizesTool } from './tools/get_table_sizes.js';
+import { getReplicationLagTool } from './tools/get_replication_lag.js';
+import { getLocksTool } from './tools/get_locks.js';
+import { getDeadlocksTool } from './tools/get_deadlocks.js';
+import { getCacheHitRatioTool } from './tools/get_cache_hit_ratio.js';
+import { getAutovacuumStatusTool } from './tools/get_autovacuum_status.js';
+import { getConnectionPoolStatsTool } from './tools/get_connection_pool_stats.js';
+import { bulkInsertTool } from './tools/bulk_insert.js';
+import { bulkUpdateTool } from './tools/bulk_update.js';
+import { bulkDeleteTool } from './tools/bulk_delete.js';
+import { upsertTool } from './tools/upsert.js';
+import { batchExecuteSqlTool } from './tools/batch_execute_sql.js';
+import { importCsvTool } from './tools/import_csv.js';
+import { exportTableTool } from './tools/export_table.js';
+import { deleteRoleTool } from './tools/delete_role.js';
+import { getReplicationSlotsTool } from './tools/get_replication_slots.js';
+import { registerResourceHandlers } from './resources/index.js';
+import { registerPromptHandlers } from './prompts/index.js';
 
 // Node.js built-in modules
 import * as fs from 'node:fs';
@@ -66,17 +151,6 @@ interface McpToolSchema {
     description?: string;
     // inputSchema is the JSON Schema object for MCP capabilities
     inputSchema: object; 
-}
-
-// Base structure for our tool objects - For Reference
-interface AppTool {
-    name: string;
-    description: string;
-    inputSchema: z.ZodTypeAny; // Zod schema for parsing
-    mcpInputSchema: object;    // Static JSON schema for MCP (Required)
-    outputSchema: z.ZodTypeAny; // Zod schema for output (optional)
-    privilegeLevel?: ToolPrivilegeLevel; // Privilege level for access control
-    execute: (input: unknown, context: ToolContext) => Promise<unknown>;
 }
 
 // Main function
@@ -184,6 +258,89 @@ async function main() {
             [getIndexStatsTool.name, getIndexStatsTool as AppTool],
             [getVectorIndexStatsTool.name, getVectorIndexStatsTool as AppTool],
             [explainQueryTool.name, explainQueryTool as AppTool],
+            [createTableTool.name, createTableTool as AppTool],
+            [alterTableTool.name, alterTableTool as AppTool],
+            [dropTableTool.name, dropTableTool as AppTool],
+            [createIndexTool.name, createIndexTool as AppTool],
+            [dropIndexTool.name, dropIndexTool as AppTool],
+            [addForeignKeyTool.name, addForeignKeyTool as AppTool],
+            [dropForeignKeyTool.name, dropForeignKeyTool as AppTool],
+            [renameTableTool.name, renameTableTool as AppTool],
+            [createSchemaTool.name, createSchemaTool as AppTool],
+            [dropSchemaTool.name, dropSchemaTool as AppTool],
+            [createSequenceTool.name, createSequenceTool as AppTool],
+            [setColumnDefaultTool.name, setColumnDefaultTool as AppTool],
+            [createStorageBucketTool.name, createStorageBucketTool as AppTool],
+            [deleteStorageBucketTool.name, deleteStorageBucketTool as AppTool],
+            [uploadFileTool.name, uploadFileTool as AppTool],
+            [downloadFileTool.name, downloadFileTool as AppTool],
+            [deleteStorageObjectTool.name, deleteStorageObjectTool as AppTool],
+            [moveStorageObjectTool.name, moveStorageObjectTool as AppTool],
+            [copyStorageObjectTool.name, copyStorageObjectTool as AppTool],
+            [getStorageObjectMetadataTool.name, getStorageObjectMetadataTool as AppTool],
+            [createSignedUrlTool.name, createSignedUrlTool as AppTool],
+            [emptyStorageBucketTool.name, emptyStorageBucketTool as AppTool],
+            [bulkCreateAuthUsersTool.name, bulkCreateAuthUsersTool as AppTool],
+            [bulkDeleteAuthUsersTool.name, bulkDeleteAuthUsersTool as AppTool],
+            [bulkUpdateAuthUsersTool.name, bulkUpdateAuthUsersTool as AppTool],
+            [sendPasswordResetTool.name, sendPasswordResetTool as AppTool],
+            [inviteUserTool.name, inviteUserTool as AppTool],
+            [confirmUserEmailTool.name, confirmUserEmailTool as AppTool],
+            [banUserTool.name, banUserTool as AppTool],
+            [unbanUserTool.name, unbanUserTool as AppTool],
+            [listUserSessionsTool.name, listUserSessionsTool as AppTool],
+            [revokeUserSessionsTool.name, revokeUserSessionsTool as AppTool],
+            [getAuthSettingsTool.name, getAuthSettingsTool as AppTool],
+            [updateAuthSettingsTool.name, updateAuthSettingsTool as AppTool],
+            [createRoleTool.name, createRoleTool as AppTool],
+            [listRolesTool.name, listRolesTool as AppTool],
+            [searchSimilarVectorsTool.name, searchSimilarVectorsTool as AppTool],
+            [insertVectorTool.name, insertVectorTool as AppTool],
+            [createVectorIndexTool.name, createVectorIndexTool as AppTool],
+            [dropVectorIndexTool.name, dropVectorIndexTool as AppTool],
+            [getVectorExtensionStatusTool.name, getVectorExtensionStatusTool as AppTool],
+            [optimizeVectorIndexTool.name, optimizeVectorIndexTool as AppTool],
+            [deployEdgeFunctionTool.name, deployEdgeFunctionTool as AppTool],
+            [updateEdgeFunctionTool.name, updateEdgeFunctionTool as AppTool],
+            [deleteEdgeFunctionTool.name, deleteEdgeFunctionTool as AppTool],
+            [invokeEdgeFunctionTool.name, invokeEdgeFunctionTool as AppTool],
+            [listEdgeFunctionSecretsTool.name, listEdgeFunctionSecretsTool as AppTool],
+            [setEdgeFunctionSecretTool.name, setEdgeFunctionSecretTool as AppTool],
+            [createPublicationTool.name, createPublicationTool as AppTool],
+            [alterPublicationTool.name, alterPublicationTool as AppTool],
+            [dropPublicationTool.name, dropPublicationTool as AppTool],
+            [listRealtimeChannelsTool.name, listRealtimeChannelsTool as AppTool],
+            [getRealtimeConfigTool.name, getRealtimeConfigTool as AppTool],
+            [createBackupTool.name, createBackupTool as AppTool],
+            [restoreBackupTool.name, restoreBackupTool as AppTool],
+            [listBackupsTool.name, listBackupsTool as AppTool],
+            [vacuumAnalyzeTool.name, vacuumAnalyzeTool as AppTool],
+            [reindexTableTool.name, reindexTableTool as AppTool],
+            [analyzeTableTool.name, analyzeTableTool as AppTool],
+            [pgTerminateBackendTool.name, pgTerminateBackendTool as AppTool],
+            [createRlsPolicyTool.name, createRlsPolicyTool as AppTool],
+            [deleteRlsPolicyTool.name, deleteRlsPolicyTool as AppTool],
+            [updateRlsPolicyTool.name, updateRlsPolicyTool as AppTool],
+            [enableRlsTool.name, enableRlsTool as AppTool],
+            [disableRlsTool.name, disableRlsTool as AppTool],
+            [forceRlsTool.name, forceRlsTool as AppTool],
+            [getSlowQueriesTool.name, getSlowQueriesTool as AppTool],
+            [getTableSizesTool.name, getTableSizesTool as AppTool],
+            [getReplicationLagTool.name, getReplicationLagTool as AppTool],
+            [getLocksTool.name, getLocksTool as AppTool],
+            [getDeadlocksTool.name, getDeadlocksTool as AppTool],
+            [getCacheHitRatioTool.name, getCacheHitRatioTool as AppTool],
+            [getAutovacuumStatusTool.name, getAutovacuumStatusTool as AppTool],
+            [getConnectionPoolStatsTool.name, getConnectionPoolStatsTool as AppTool],
+            [bulkInsertTool.name, bulkInsertTool as AppTool],
+            [bulkUpdateTool.name, bulkUpdateTool as AppTool],
+            [bulkDeleteTool.name, bulkDeleteTool as AppTool],
+            [upsertTool.name, upsertTool as AppTool],
+            [batchExecuteSqlTool.name, batchExecuteSqlTool as AppTool],
+            [importCsvTool.name, importCsvTool as AppTool],
+            [exportTableTool.name, exportTableTool as AppTool],
+            [deleteRoleTool.name, deleteRoleTool as AppTool],
+            [getReplicationSlotsTool.name, getReplicationSlotsTool as AppTool],
         ]);
 
         // --- Tool Filtering Logic ---
@@ -258,7 +415,11 @@ async function main() {
             };
         }
 
-        const capabilities = { tools: capabilitiesTools };
+        const capabilities = {
+            tools: capabilitiesTools,
+            resources: { listChanged: true },
+            prompts: { listChanged: true },
+        };
 
         // Factory function to create a configured MCP server instance
         // This is needed for HTTP mode where each request may need a fresh server
@@ -278,6 +439,10 @@ async function main() {
             server.setRequestHandler(ListToolsRequestSchema, async () => ({
                 tools: Object.values(capabilities.tools),
             }));
+
+            // Register resource and prompt handlers
+            registerResourceHandlers(server, selfhostedClient);
+            registerPromptHandlers(server);
 
             server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 const toolName = request.params.name;
@@ -390,6 +555,7 @@ async function main() {
                 void (async () => {
                     console.error('Shutting down...');
                     await httpServer.stop();
+                    await selfhostedClient.close();
                     process.exit(0);
                 })();
             });
@@ -398,6 +564,7 @@ async function main() {
                 void (async () => {
                     console.error('Shutting down...');
                     await httpServer.stop();
+                    await selfhostedClient.close();
                     process.exit(0);
                 })();
             });
@@ -415,6 +582,25 @@ async function main() {
             const stdioTransport = new StdioServerTransport();
             await server.connect(stdioTransport);
             console.error('MCP Server connected to stdio.');
+
+            // Handle graceful shutdown in stdio mode
+            process.on('SIGINT', () => {
+                void (async () => {
+                    console.error('Shutting down stdio server...');
+                    await server.close();
+                    await selfhostedClient.close();
+                    process.exit(0);
+                })();
+            });
+
+            process.on('SIGTERM', () => {
+                void (async () => {
+                    console.error('Shutting down stdio server...');
+                    await server.close();
+                    await selfhostedClient.close();
+                    process.exit(0);
+                })();
+            });
         }
 
     } catch (error) {

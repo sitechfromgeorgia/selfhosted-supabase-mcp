@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+- **CVE-2026-25536 Patch**: Updated `@modelcontextprotocol/sdk` from `^1.25.2` to `^1.27.1` to fix cross-client data leak vulnerability in StreamableHTTPServerTransport (CVSS 7.1)
+- **SQL Injection Fix**: Replaced string-interpolated `LIMIT` clauses in `get_logs.ts` with parameterized queries (`$1`) via updated `executeSqlWithFallback` and `executeSqlWithPg`
+
+### Added
+- **MCP Resources Support**: New `database://schema/{schema}/tables/{table}`, `database://function/{name}`, and `database://rls/{schema}/{table}` resources for direct schema introspection
+- **MCP Prompts Support**: Added `analyze-slow-queries`, `audit-security`, `migration-review`, and `optimize-indexes` prompt templates
+- **`defineTool` Helper**: New `src/tools/define-tool.ts` utility that auto-generates `mcpInputSchema` from Zod schemas using Zod v4's built-in `toJSONSchema`
+- **Connection Pool Management**: Added `healthCheck()` and `close()` methods to `SelfhostedSupabaseClient` for graceful shutdown
+- **RBAC Unit Tests**: Added comprehensive tests for `canAccessTool()` covering `service_role`, `authenticated`, `anon`, and unknown roles
+- **HTTP Server Integration Tests**: Added tests for health check, CORS, security headers, rate limiting, JWT auth, and stateless mode behavior
+- **Tool-Specific Tests**: Added tests for `explain_query` (write query detection, ANALYZE warnings) and `get_auth_user` (user lookup, not-found, invalid UUID)
+- **GitHub Actions CI**: Added `.github/workflows/ci.yml` with typecheck, test, build, and security audit jobs
+
+### Changed
+- **Dockerfile**: Rewrote to use `oven/bun:1.1-alpine` instead of `node:lts-alpine`, aligning with project's Bun runtime migration
+- **Health Check Endpoint**: Now includes `timestamp` in response
+- **Shutdown Handlers**: Both HTTP and stdio modes now gracefully close the pg connection pool on SIGINT/SIGTERM
+- **Version Sync**: `package.json` version bumped from `1.2.0` to `1.3.0` to match `src/index.ts`
+
+### Fixed
+- **Missing Dependency**: Removed unused `zod-to-json-schema` import from `src/index.ts` (Zod v4 has built-in support)
+- **Parameterized Queries**: `executeSqlWithPg` and `executeSqlWithFallback` now support optional `params` array for safe parameterized queries
+
 ### Added
 
 - **HTTP Transport Mode**: Run MCP server in HTTP mode for Docker/Kong integration

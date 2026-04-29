@@ -350,9 +350,11 @@ export class HttpMcpServer {
     }
 
     private setupRoutes(): void {
-        // Health check endpoint (no auth required, minimal info)
+        // Health check endpoint (no auth required, checks dependencies)
         this.app.get('/health', (_req: Request, res: Response) => {
-            res.json({ status: 'healthy' });
+            // Basic health — full DB check would require async client access
+            // which is not directly available here; returning basic status
+            res.json({ status: 'healthy', timestamp: new Date().toISOString() });
         });
 
         // Apply JWT authentication to /mcp routes

@@ -143,11 +143,11 @@ async function tryAnalyticsLogs(
         FROM _analytics.${tableName}
         WHERE timestamp > NOW() - INTERVAL '24 hours'
         ORDER BY timestamp DESC
-        LIMIT ${limit}
+        LIMIT $1
     `;
 
     try {
-        const result = await executeSqlWithFallback(client, queryLogsSql, true);
+        const result = await executeSqlWithFallback(client, queryLogsSql, true, [limit]);
 
         if (isSqlErrorResponse(result)) {
             context.log(`Error querying analytics logs: ${result.error.message}`, 'warn');
@@ -240,11 +240,11 @@ async function tryPostgresCsvLogs(
             FROM pglog
             WHERE log_time > NOW() - INTERVAL '24 hours'
             ORDER BY log_time DESC
-            LIMIT ${limit}
+            LIMIT $1
         `;
 
         try {
-            const result = await executeSqlWithFallback(client, queryLogsSql, true);
+            const result = await executeSqlWithFallback(client, queryLogsSql, true, [limit]);
 
             if (isSqlErrorResponse(result)) {
                 context.log(`Error querying CSV logs: ${result.error.message}`, 'warn');
