@@ -45,14 +45,34 @@ export const listStorageBucketsTool = {
         context: ToolContext
     ): Promise<ListStorageBucketsOutput> => {
         const client = context.selfhostedClient;
-        // Use console.error for operational logging
         console.error('Listing storage buckets...');
 
-        // Check if direct DB connection is available, as it's likely needed for storage schema
+        // 1. Try Supabase Storage API (works without DATABASE_URL)
+        // Use service role if available, otherwise anon client
+        const apiClient = client.getServiceRoleClient() ?? client.supabase;
+        const { data, error } = await apiClient.storage.listBuckets();
+        if (error) {
+            context.log(`Supabase Storage API failed: ${error.message}. Falling back to DB...`, 'warn');
+        } else if (data) {
+            console.error(`Found ${data.length} buckets via API.`);
+            // Map API response to our schema (API returns slightly different shape)
+            const mapped = data.map((b: any) => ({
+                id: b.id,
+                name: b.name,
+                owner: b.owner ?? null,
+                public: b.public ?? false,
+                avif_autodetection: b.avif_autodetection ?? false,
+                file_size_limit: b.file_size_limit ?? null,
+                allowed_mime_types: b.allowed_mime_types ?? null,
+                created_at: b.created_at ?? null,
+                updated_at: b.updated_at ?? null,
+            }));
+            return ListStorageBucketsOutputSchema.parse(mapped);
+        }
+
+        // 2. Fallback to direct DB connection
         if (!client.isPgAvailable()) {
-            // Log error for MCP client
-            context.log('Direct database connection (DATABASE_URL) is required to list storage buckets.', 'error');
-            throw new Error('Direct database connection (DATABASE_URL) is required to list storage buckets.');
+            throw new Error('Neither Supabase Storage API nor direct database connection (DATABASE_URL) is available. Cannot list storage buckets.');
         }
 
         const sql = `
@@ -64,19 +84,17 @@ export const listStorageBucketsTool = {
                 avif_autodetection,
                 file_size_limit,
                 allowed_mime_types,
-                created_at::text, -- Cast to text
-                updated_at::text  -- Cast to text
+                created_at::text,
+                updated_at::text
             FROM storage.buckets;
         `;
 
         console.error('Attempting to list storage buckets using direct DB connection...');
         const result = await client.executeSqlWithPg(sql);
-
-        // Validate and return using handler
         const validatedBuckets = handleSqlResponse(result, ListStorageBucketsOutputSchema);
 
-        console.error(`Found ${validatedBuckets.length} buckets.`);
-        context.log(`Found ${validatedBuckets.length} buckets.`); // Also log for MCP
+        console.error(`Found ${validatedBuckets.length} buckets via DB.`);
+        context.log(`Found ${validatedBuckets.length} buckets.`);
         return validatedBuckets;
     },
 };

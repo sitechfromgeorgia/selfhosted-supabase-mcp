@@ -67,54 +67,59 @@ export const listStorageObjectsTool = {
 
         console.error(`Listing objects for bucket ${bucket_id} (Prefix: ${prefix || 'N/A'})...`);
 
-        if (!client.isPgAvailable()) {
-            context.log('Direct database connection (DATABASE_URL) is required to list storage objects.', 'error');
-            throw new Error('Direct database connection (DATABASE_URL) is required to list storage objects.');
+        // 1. Try Supabase Storage API (works without DATABASE_URL)
+        const apiClient = client.getServiceRoleClient() ?? client.supabase;
+        const { data, error } = await apiClient.storage.from(bucket_id).list(prefix || undefined, { limit, offset });
+        if (error) {
+            context.log(`Supabase Storage API failed: ${error.message}. Falling back to DB...`, 'warn');
+        } else if (data) {
+            console.error(`Found ${data.length} objects via API.`);
+            // Map API response to our schema
+            const mapped = data.map((item: any) => ({
+                id: item.id ?? '',
+                name: item.name ?? null,
+                bucket_id,
+                owner: null,
+                version: null,
+                mimetype: item.metadata?.mimetype ?? null,
+                size: item.metadata?.size ?? null,
+                metadata: item.metadata ?? null,
+                created_at: item.created_at ?? null,
+                updated_at: item.updated_at ?? null,
+                last_accessed_at: null,
+            }));
+            return ListStorageObjectsOutputSchema.parse(mapped);
         }
 
-        // Use a transaction to get access to the pg client for parameterized queries
+        // 2. Fallback to direct DB
+        if (!client.isPgAvailable()) {
+            throw new Error('Neither Supabase Storage API nor direct database connection (DATABASE_URL) is available. Cannot list storage objects.');
+        }
+
         const objects = await client.executeTransactionWithPg(async (pgClient: PoolClient) => {
-            // Build query with parameters
             let sql = `
                 SELECT
-                    id,
-                    name,
-                    bucket_id,
-                    owner,
-                    version,
+                    id, name, bucket_id, owner, version,
                     metadata ->> 'mimetype' AS mimetype,
-                    metadata ->> 'size' AS size, -- Extract size from metadata
+                    metadata ->> 'size' AS size,
                     metadata,
-                    created_at::text,
-                    updated_at::text,
-                    last_accessed_at::text
+                    created_at::text, updated_at::text, last_accessed_at::text
                 FROM storage.objects
                 WHERE bucket_id = $1
             `;
             const params: (string | number)[] = [bucket_id];
             let paramIndex = 2;
-
-            if (prefix) {
-                sql += ` AND name LIKE $${paramIndex++}`;
-                params.push(`${prefix}%`);
-            }
-
+            if (prefix) { sql += ` AND name LIKE $${paramIndex++}`; params.push(`${prefix}%}`); }
             sql += ' ORDER BY name ASC NULLS FIRST';
-            sql += ` LIMIT $${paramIndex++}`;
-            params.push(limit);
-            sql += ` OFFSET $${paramIndex++}`;
-            params.push(offset);
+            sql += ` LIMIT $${paramIndex++}`; params.push(limit);
+            sql += ` OFFSET $${paramIndex++}`; params.push(offset);
             sql += ';';
 
-            console.error('Executing parameterized SQL to list storage objects within transaction...');
-            const result = await pgClient.query(sql, params); // Raw pg result
-
-            // Explicitly pass result.rows, which matches the expected structure
-            // of SqlSuccessResponse (unknown[]) for handleSqlResponse.
+            const result = await pgClient.query(sql, params);
             return handleSqlResponse(result.rows as SqlSuccessResponse, ListStorageObjectsOutputSchema);
         });
 
-        console.error(`Found ${objects.length} objects.`);
+        console.error(`Found ${objects.length} objects via DB.`);
         context.log(`Found ${objects.length} objects.`);
         return objects;
     },

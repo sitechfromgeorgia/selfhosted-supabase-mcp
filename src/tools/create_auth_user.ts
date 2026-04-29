@@ -50,93 +50,94 @@ export const createAuthUserTool = {
     mcpInputSchema: mcpInputSchema, // Ensure defined above
     outputSchema: CreatedAuthUserZodSchema,
 
-    execute: async (input: CreateAuthUserInput, context: ToolContext): Promise<CreateAuthUserOutput> => { // Use CreateAuthUserOutput
+    execute: async (input: CreateAuthUserInput, context: ToolContext): Promise<CreateAuthUserOutput> => {
         const client = context.selfhostedClient;
         const { email, password, role, app_metadata, user_metadata } = input;
 
-        // Direct DB connection is absolutely required for this direct insert
-        if (!client.isPgAvailable()) {
-             context.log('Direct database connection (DATABASE_URL) is required to create an auth user directly.', 'error');
-            throw new Error('Direct database connection (DATABASE_URL) is required to create an auth user directly.');
+        // 1. Try Supabase Admin API (more secure — handles password hashing server-side)
+        const serviceRoleClient = client.getServiceRoleClient();
+        if (serviceRoleClient) {
+            console.error(`Creating user ${email} via Supabase Admin API...`);
+            const { data, error } = await serviceRoleClient.auth.admin.createUser({
+                email,
+                password,
+                email_confirm: true,
+                role: role || 'authenticated',
+                user_metadata: user_metadata || {},
+                app_metadata: app_metadata || {},
+            });
+            if (error) {
+                context.log(`Supabase Admin API failed: ${error.message}. Falling back to DB...`, 'warn');
+            } else if (data?.user) {
+                const u = data.user;
+                console.error(`Successfully created user ${email} with ID ${u.id} via API.`);
+                return CreatedAuthUserZodSchema.parse({
+                    id: u.id,
+                    email: u.email,
+                    role: u.role,
+                    raw_app_meta_data: u.app_metadata ?? null,
+                    raw_user_meta_data: u.user_metadata ?? null,
+                    created_at: u.created_at,
+                    last_sign_in_at: u.last_sign_in_at,
+                });
+            }
         }
 
-        context.log(`Creating user ${email}...`, 'info');
+        // 2. Fallback to direct DB insert
+        if (!client.isPgAvailable()) {
+            throw new Error('Neither Supabase service role key (for Admin API) nor direct database connection (DATABASE_URL) is available. Cannot create auth user.');
+        }
 
-        // Use transaction to ensure atomicity and get pg client
+        context.log(`Creating user ${email} via DB...`, 'info');
+
         const createdUser = await client.executeTransactionWithPg(async (pgClient: PoolClient) => {
-            // Check if pgcrypto extension is available (needed for crypt)
             try {
                 await pgClient.query("SELECT crypt('test', gen_salt('bf'))");
             } catch (err) {
-                 throw new Error('Failed to execute crypt function. Ensure pgcrypto extension is enabled in the database.');
+                throw new Error('Failed to execute crypt function. Ensure pgcrypto extension is enabled.');
             }
             
-            // Construct the INSERT statement with parameterization
             const sql = `
                 INSERT INTO auth.users (
                     instance_id, email, encrypted_password, role,
                     raw_app_meta_data, raw_user_meta_data, 
-                    aud, email_confirmed_at, confirmation_sent_at -- Set required defaults
+                    aud, email_confirmed_at, confirmation_sent_at
                 )
                 VALUES (
                     COALESCE(current_setting('app.instance_id', TRUE), '00000000-0000-0000-0000-000000000000')::uuid,
-                    $1, crypt($2, gen_salt('bf')),
-                    $3,
-                    $4::jsonb,
-                    $5::jsonb,
+                    $1, crypt($2, gen_salt('bf')), $3, $4::jsonb, $5::jsonb,
                     'authenticated', now(), now()
                 )
                 RETURNING id, email, role, raw_app_meta_data, raw_user_meta_data, created_at::text, last_sign_in_at::text;
             `;
-
-            const params = [
-                email,
-                password,
-                role || 'authenticated', // Default role
-                JSON.stringify(app_metadata || {}),
-                JSON.stringify(user_metadata || {})
-            ];
+            const params = [email, password, role || 'authenticated', JSON.stringify(app_metadata || {}), JSON.stringify(user_metadata || {})];
 
             try {
                 const result = await pgClient.query(sql, params);
                 if (result.rows.length === 0) {
-                     throw new Error('User creation failed, no user returned after insert.');
+                    throw new Error('User creation failed, no user returned after insert.');
                 }
                 return CreatedAuthUserZodSchema.parse(result.rows[0]);
             } catch (dbError: unknown) {
                 let errorMessage = 'Unknown database error during user creation';
-
                 if (typeof dbError === 'object' && dbError !== null && 'code' in dbError) {
-                    // Safely extract code and message with proper type narrowing
                     const errorCode = String((dbError as { code: unknown }).code);
                     const errorMsg = 'message' in dbError && typeof (dbError as { message: unknown }).message === 'string'
-                        ? (dbError as { message: string }).message
-                        : undefined;
-
-                    // Check PG error code for unique violation
+                        ? (dbError as { message: string }).message : undefined;
                     if (errorCode === '23505') {
                         errorMessage = `User creation failed: Email '${email}' likely already exists.`;
                     } else if (errorMsg) {
                         errorMessage = `Database error (${errorCode}): ${errorMsg}`;
-                    } else {
-                        errorMessage = `Database error code: ${errorCode}`;
                     }
                 } else if (dbError instanceof Error) {
-                    errorMessage = `Database error during user creation: ${dbError.message}`;
-                } else {
-                    errorMessage = `Database error during user creation: ${String(dbError)}`;
+                    errorMessage = dbError.message;
                 }
-
-                // Log sanitized error (not full object to avoid leaking sensitive info)
-                console.error('Error creating user in DB:', errorMessage);
-
-                // Throw a specific error message
                 throw new Error(errorMessage);
             }
         });
 
         console.error(`Successfully created user ${email} with ID ${createdUser.id}.`);
         context.log(`Successfully created user ${email} with ID ${createdUser.id}.`);
-        return createdUser; // Matches CreateAuthUserOutput (AuthUser)
+        return createdUser;
     },
 }; 

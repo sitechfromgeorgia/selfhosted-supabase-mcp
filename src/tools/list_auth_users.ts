@@ -57,13 +57,37 @@ export const listAuthUsersTool = {
         const client = context.selfhostedClient;
         const { limit, offset } = input;
 
-        // Check if direct DB connection is available, as it's likely needed for auth.users
-        if (!client.isPgAvailable()) {
-            context.log('Direct database connection (DATABASE_URL) is required to list auth users.', 'error');
-            throw new Error('Direct database connection (DATABASE_URL) is required to list auth users.');
+        // 1. Try Supabase Admin API (works without DATABASE_URL)
+        const serviceRoleClient = client.getServiceRoleClient();
+        if (serviceRoleClient) {
+            console.error('Attempting to list auth users via Supabase Admin API...');
+            const { data, error } = await serviceRoleClient.auth.admin.listUsers({
+                page: Math.floor(offset / limit) + 1,
+                perPage: limit,
+            });
+            if (error) {
+                context.log(`Supabase Admin API failed: ${error.message}. Falling back to DB...`, 'warn');
+            } else if (data?.users) {
+                console.error(`Found ${data.users.length} users via API.`);
+                // Map API response to our schema
+                const mapped = data.users.map((u: any) => ({
+                    id: u.id,
+                    email: u.email,
+                    role: u.role,
+                    raw_app_meta_data: u.app_metadata ?? u.raw_app_meta_data ?? null,
+                    raw_user_meta_data: u.user_metadata ?? u.raw_user_meta_data ?? null,
+                    created_at: u.created_at,
+                    last_sign_in_at: u.last_sign_in_at,
+                }));
+                return ListAuthUsersOutputSchema.parse(mapped);
+            }
         }
 
-        // Construct SQL query - ensure schema name is correct
+        // 2. Fallback to direct DB connection
+        if (!client.isPgAvailable()) {
+            throw new Error('Neither Supabase service role key (for Admin API) nor direct database connection (DATABASE_URL) is available. Cannot list auth users.');
+        }
+
         const listUsersSql = `
             SELECT
                 id,
@@ -71,24 +95,21 @@ export const listAuthUsersTool = {
                 role,
                 raw_app_meta_data,
                 raw_user_meta_data,
-                created_at::text, -- Cast timestamp to text for JSON
-                last_sign_in_at::text -- Cast timestamp to text for JSON
+                created_at::text,
+                last_sign_in_at::text
             FROM
                 auth.users
             ORDER BY
                 created_at DESC
             LIMIT ${limit}
             OFFSET ${offset}
-        `; // No semicolon needed here
+        `;
 
         console.error('Attempting to list auth users using direct DB connection...');
-        // Use direct connection (executeSqlWithPg) as it likely has necessary privileges
         const result = await client.executeSqlWithPg(listUsersSql);
-
-        // Validate and return
         const validatedUsers = handleSqlResponse(result, ListAuthUsersOutputSchema);
 
-        console.error(`Found ${validatedUsers.length} users.`);
+        console.error(`Found ${validatedUsers.length} users via DB.`);
         context.log(`Found ${validatedUsers.length} users.`);
         return validatedUsers;
     },

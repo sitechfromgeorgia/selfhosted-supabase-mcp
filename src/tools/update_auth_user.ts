@@ -55,45 +55,60 @@ export const updateAuthUserTool = {
     mcpInputSchema: mcpInputSchema, // Ensure defined
     outputSchema: UpdatedAuthUserZodSchema,
 
-    execute: async (input: UpdateAuthUserInput, context: ToolContext): Promise<UpdateAuthUserOutput> => { // Use UpdateAuthUserOutput
+    execute: async (input: UpdateAuthUserInput, context: ToolContext): Promise<UpdateAuthUserOutput> => {
         const client = context.selfhostedClient;
         const { user_id, email, password, role, app_metadata, user_metadata } = input;
 
+        // 1. Try Supabase Admin API (secure password hashing server-side)
+        const serviceRoleClient = client.getServiceRoleClient();
+        if (serviceRoleClient) {
+            console.error(`Updating user ${user_id} via Supabase Admin API...`);
+            const updateData: any = {};
+            if (email !== undefined) updateData.email = email;
+            if (password !== undefined) updateData.password = password;
+            if (user_metadata !== undefined) updateData.user_metadata = user_metadata;
+            if (app_metadata !== undefined) updateData.app_metadata = app_metadata;
+            // Note: role update via Admin API may not be supported in all versions; fall back to DB if needed
+
+            if (Object.keys(updateData).length > 0) {
+                const { data, error } = await serviceRoleClient.auth.admin.updateUserById(user_id, updateData);
+                if (error) {
+                    context.log(`Supabase Admin API failed: ${error.message}. Falling back to DB...`, 'warn');
+                } else if (data?.user) {
+                    const u = data.user;
+                    console.error(`Successfully updated user ${user_id} via API.`);
+                    return UpdatedAuthUserZodSchema.parse({
+                        id: u.id,
+                        email: u.email,
+                        role: u.role,
+                        raw_app_meta_data: u.app_metadata ?? null,
+                        raw_user_meta_data: u.user_metadata ?? null,
+                        created_at: u.created_at,
+                        updated_at: u.updated_at,
+                        last_sign_in_at: u.last_sign_in_at,
+                    });
+                }
+            }
+        }
+
+        // 2. Fallback to direct DB
         if (!client.isPgAvailable()) {
-            context.log('Direct database connection (DATABASE_URL) is required to update auth user details.', 'error');
-            throw new Error('Direct database connection (DATABASE_URL) is required to update auth user details.');
+            throw new Error('Neither Supabase service role key (for Admin API) nor direct database connection (DATABASE_URL) is available. Cannot update auth user.');
         }
 
         const updates: string[] = [];
         const params: (string | object | null)[] = [];
         let paramIndex = 1;
 
-        // Dynamically build SET clauses and params array
-        if (email !== undefined) {
-            updates.push(`email = $${paramIndex++}`);
-            params.push(email);
-        }
-        // SECURITY NOTE: The `password !== undefined` check below is NOT a timing attack.
-        // We're only checking if the field was provided, not comparing password values.
-        // Actual password comparison happens in the database via bcrypt which is constant-time.
+        if (email !== undefined) { updates.push(`email = $${paramIndex++}`); params.push(email); }
         if (password !== undefined) {
             updates.push(`encrypted_password = crypt($${paramIndex++}, gen_salt('bf'))`);
             params.push(password);
         }
-        if (role !== undefined) {
-            updates.push(`role = $${paramIndex++}`);
-            params.push(role);
-        }
-        if (app_metadata !== undefined) {
-            updates.push(`raw_app_meta_data = $${paramIndex++}::jsonb`);
-            params.push(JSON.stringify(app_metadata));
-        }
-        if (user_metadata !== undefined) {
-            updates.push(`raw_user_meta_data = $${paramIndex++}::jsonb`);
-            params.push(JSON.stringify(user_metadata));
-        }
+        if (role !== undefined) { updates.push(`role = $${paramIndex++}`); params.push(role); }
+        if (app_metadata !== undefined) { updates.push(`raw_app_meta_data = $${paramIndex++}::jsonb`); params.push(JSON.stringify(app_metadata)); }
+        if (user_metadata !== undefined) { updates.push(`raw_user_meta_data = $${paramIndex++}::jsonb`); params.push(JSON.stringify(user_metadata)); }
 
-        // Add user_id as the final parameter for the WHERE clause
         params.push(user_id);
         const userIdParamIndex = paramIndex;
 
@@ -104,60 +119,29 @@ export const updateAuthUserTool = {
             RETURNING id, email, role, raw_app_meta_data, raw_user_meta_data, created_at::text, updated_at::text, last_sign_in_at::text;
         `;
 
-        console.error(`Attempting to update auth user ${user_id}...`);
-        context.log(`Attempting to update auth user ${user_id}...`);
-
+        console.error(`Updating auth user ${user_id} via DB...`);
         const updatedUser = await client.executeTransactionWithPg(async (pgClient: PoolClient) => {
-             // Check pgcrypto if password is being updated
-             if (password !== undefined) {
-                try {
-                    await pgClient.query("SELECT crypt('test', gen_salt('bf'))");
-                } catch (err) {
-                    throw new Error('Failed to execute crypt function for password update. Ensure pgcrypto extension is enabled.');
-                }
-             }
-
+            if (password !== undefined) {
+                try { await pgClient.query("SELECT crypt('test', gen_salt('bf'))"); }
+                catch { throw new Error('pgcrypto extension required for password update.'); }
+            }
             try {
                 const result = await pgClient.query(sql, params);
-                if (result.rows.length === 0) {
-                    throw new Error(`User update failed: User with ID ${user_id} not found or no rows affected.`);
-                }
+                if (result.rows.length === 0) throw new Error(`User ${user_id} not found.`);
                 return UpdatedAuthUserZodSchema.parse(result.rows[0]);
             } catch (dbError: unknown) {
-                let errorMessage = 'Unknown database error during user update';
-
-                // Check for potential email unique constraint violation if email was updated
+                let errorMessage = 'Database error during user update';
                 if (typeof dbError === 'object' && dbError !== null && 'code' in dbError) {
-                    // Safely extract code and message with proper type narrowing
                     const errorCode = String((dbError as { code: unknown }).code);
-                    const errorMsg = 'message' in dbError && typeof (dbError as { message: unknown }).message === 'string'
-                        ? (dbError as { message: string }).message
-                        : undefined;
-
-                    // Check PG error code for unique violation
                     if (email !== undefined && errorCode === '23505') {
-                        errorMessage = `User update failed: Email '${email}' likely already exists for another user.`;
-                    } else if (errorMsg) {
-                        errorMessage = `Database error (${errorCode}): ${errorMsg}`;
-                    } else {
-                        errorMessage = `Database error code: ${errorCode}`;
+                        errorMessage = `Email '${email}' already exists.`;
                     }
-                } else if (dbError instanceof Error) {
-                    errorMessage = `Database error during user update: ${dbError.message}`;
-                } else {
-                    errorMessage = `Database error during user update: ${String(dbError)}`;
-                }
-
-                // Log sanitized error (not full object to avoid leaking sensitive info)
-                console.error('Error updating user in DB:', errorMessage);
-
-                // Throw the specific error message
+                } else if (dbError instanceof Error) { errorMessage = dbError.message; }
                 throw new Error(errorMessage);
             }
         });
 
         console.error(`Successfully updated user ${user_id}.`);
-        context.log(`Successfully updated user ${user_id}.`);
-        return updatedUser; // Matches UpdateAuthUserOutput (AuthUser)
+        return updatedUser;
     },
 }; 

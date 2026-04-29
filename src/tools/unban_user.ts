@@ -42,38 +42,36 @@ export const unbanUserTool = {
         const client = context.selfhostedClient;
         const { user_id, dry_run } = input;
 
-        if (!client.isPgAvailable()) {
-            throw new Error('Direct database connection (DATABASE_URL) is required.');
+        if (dry_run) {
+            return { success: true, message: `DRY RUN: Would unban user ${user_id}.`, user_id };
         }
 
-        if (dry_run) {
-            return {
-                success: true,
-                message: `DRY RUN: Would unban user ${user_id}.`,
-                user_id,
-            };
+        // 1. Try Supabase Admin API
+        const serviceRoleClient = client.getServiceRoleClient();
+        if (serviceRoleClient) {
+            console.error(`Unbanning user ${user_id} via Supabase Admin API...`);
+            const { error } = await serviceRoleClient.auth.admin.updateUserById(user_id, { ban_duration: 'none' });
+            if (error) {
+                context.log(`Supabase Admin API failed: ${error.message}. Falling back to DB...`, 'warn');
+            } else {
+                console.error(`Successfully unbanned user ${user_id} via API.`);
+                return { success: true, message: `User ${user_id} unbanned successfully.`, user_id };
+            }
+        }
+
+        // 2. Fallback to direct DB
+        if (!client.isPgAvailable()) {
+            throw new Error('Neither Supabase service role key (for Admin API) nor direct database connection (DATABASE_URL) is available. Cannot unban user.');
         }
 
         context.log(`Unbanning user ${user_id}...`, 'info');
-
         const result = await client.executeSqlWithPg(
             `UPDATE auth.users SET banned_until = null, updated_at = now() WHERE id = $1 RETURNING id`,
             [user_id]
         );
-
-        if ('error' in result) {
-            throw new Error(`Failed to unban user: ${result.error.message}`);
-        }
-
+        if ('error' in result) throw new Error(`Failed to unban user: ${result.error.message}`);
         const rows = result as any[];
-        if (rows.length === 0) {
-            throw new Error(`User ${user_id} not found.`);
-        }
-
-        return {
-            success: true,
-            message: `User ${user_id} unbanned successfully.`,
-            user_id,
-        };
+        if (rows.length === 0) throw new Error(`User ${user_id} not found.`);
+        return { success: true, message: `User ${user_id} unbanned successfully.`, user_id };
     },
 };

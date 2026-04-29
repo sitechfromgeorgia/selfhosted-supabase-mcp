@@ -40,44 +40,37 @@ export const deleteAuthUserTool = {
         const client = context.selfhostedClient;
         const { user_id } = input;
 
-        // This operation requires elevated privileges and modifies data.
-        // Prefer direct DB connection if available and service key is configured.
-        if (!client.isPgAvailable()) {
-            throw new Error('Direct database connection (DATABASE_URL) is required for deleting users but is not configured or available.');
+        // 1. Try Supabase Admin API
+        const serviceRoleClient = client.getServiceRoleClient();
+        if (serviceRoleClient) {
+            console.error(`Deleting user ${user_id} via Supabase Admin API...`);
+            const { error } = await serviceRoleClient.auth.admin.deleteUser(user_id);
+            if (error) {
+                context.log(`Supabase Admin API failed: ${error.message}. Falling back to DB...`, 'warn');
+            } else {
+                console.error(`Successfully deleted user ${user_id} via API.`);
+                return { success: true, message: `Successfully deleted user with ID: ${user_id}` };
+            }
         }
-        // Service role key check remains relevant for awareness, but remove console.warn
-        // if (!client.getServiceRoleKey()) {
-        //      console.warn('Service role key not explicitly configured, direct DB connection might fail if privileges are insufficient.');
-        // }
+
+        // 2. Fallback to direct DB
+        if (!client.isPgAvailable()) {
+            throw new Error('Neither Supabase service role key (for Admin API) nor direct database connection (DATABASE_URL) is available. Cannot delete auth user.');
+        }
 
         try {
-            // Use executeTransactionWithPg for safety, though it's a single statement
             const result = await client.executeTransactionWithPg(async (pgClient) => {
-                // Use parameter binding for safety
-                const deleteResult = await pgClient.query(
-                    'DELETE FROM auth.users WHERE id = $1',
-                    [user_id]
-                );
+                const deleteResult = await pgClient.query('DELETE FROM auth.users WHERE id = $1', [user_id]);
                 return deleteResult;
             });
 
             if (result.rowCount === 1) {
-                return {
-                    success: true,
-                    message: `Successfully deleted user with ID: ${user_id}`,
-                };
+                return { success: true, message: `Successfully deleted user with ID: ${user_id}` };
             }
-            // If rowCount was not 1, the user wasn't found/deleted
-            return {
-                success: false,
-                message: `User with ID ${user_id} not found or could not be deleted.`,
-            };
-
+            return { success: false, message: `User with ID ${user_id} not found or could not be deleted.` };
         } catch (error: unknown) {
             const errorMessage = error instanceof Error ? error.message : String(error);
-            console.error(`Error deleting user ${user_id}:`, errorMessage);
-            // Rethrow for the main handler to format the error response
-            throw new Error(`Failed to delete user ${user_id}: ${errorMessage}`); 
+            throw new Error(`Failed to delete user ${user_id}: ${errorMessage}`);
         }
     },
 }; 
