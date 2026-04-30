@@ -62,6 +62,22 @@ Tools are categorized by privilege level:
 | `get_rls_status` | Shows RLS enabled/disabled status for tables | Regular |
 | `get_advisors` | Retrieves security and performance advisory notices | Regular |
 
+### DDL & Schema Management
+| Tool | Description | Privilege |
+|------|-------------|-----------|
+| `create_table` | Create a new table with columns, types, and constraints | **Privileged** |
+| `alter_table` | Add, drop, modify, or rename columns | **Privileged** |
+| `drop_table` | Safely drop a table with CASCADE/IF EXISTS guards | **Privileged** |
+| `create_index` | Create an index, with CONCURRENTLY for large tables | **Privileged** |
+| `drop_index` | Safely remove an index | **Privileged** |
+| `add_foreign_key` | Add a foreign key constraint with validation | **Privileged** |
+| `drop_foreign_key` | Remove a foreign key constraint | **Privileged** |
+| `rename_table` | Rename a table and update foreign key references | **Privileged** |
+| `create_schema` | Create a new database schema | **Privileged** |
+| `drop_schema` | Drop a schema with CASCADE option | **Privileged** |
+| `create_sequence` | Create a sequence for auto-increment columns | **Privileged** |
+| `set_column_default` | Set or remove a column default value | **Privileged** |
+
 ### Project Configuration
 | Tool | Description | Privilege |
 |------|-------------|-----------|
@@ -83,6 +99,21 @@ Tools are categorized by privilege level:
 | `create_auth_user` | Creates a new user in `auth.users` (password bcrypt-hashed via pgcrypto) | **Privileged** |
 | `update_auth_user` | Updates user details (password bcrypt-hashed if changed) | **Privileged** |
 | `delete_auth_user` | Deletes a user from `auth.users` | **Privileged** |
+| `bulk_create_auth_users` | Batch create multiple users from an array | **Privileged** |
+| `bulk_delete_auth_users` | Batch delete users by IDs or filter | **Privileged** |
+| `bulk_update_auth_users` | Batch update user metadata or roles | **Privileged** |
+| `send_password_reset` | Trigger a password reset email | **Privileged** |
+| `invite_user` | Send a magic link invitation | **Privileged** |
+| `confirm_user_email` | Manually confirm a user's email address | **Privileged** |
+| `ban_user` | Ban a user (set ban status) | **Privileged** |
+| `unban_user` | Remove ban status from a user | **Privileged** |
+| `list_user_sessions` | List active sessions for a user | Regular |
+| `revoke_user_sessions` | Sign out a user everywhere | **Privileged** |
+| `get_auth_settings` | Retrieve auth settings (MFA, providers, templates) | Regular |
+| `update_auth_settings` | Configure auth providers and settings | **Privileged** |
+| `create_role` | Create a custom role | **Privileged** |
+| `list_roles` | List custom roles | Regular |
+| `delete_role` | Drop a PostgreSQL role with reassignment | **Privileged** |
 
 ### Storage
 | Tool | Description | Privilege |
@@ -91,6 +122,91 @@ Tools are categorized by privilege level:
 | `list_storage_objects` | Lists objects within a specific bucket | Regular |
 | `get_storage_config` | Retrieves storage bucket configuration | Regular |
 | `update_storage_config` | Updates storage bucket settings | **Privileged** |
+| `create_storage_bucket` | Create a new bucket with optional policies | **Privileged** |
+| `delete_storage_bucket` | Remove a bucket and its contents | **Privileged** |
+| `upload_file` | Upload base64/bytes to a bucket | **Privileged** |
+| `download_file` | Retrieve file contents from a bucket | Regular |
+| `delete_storage_object` | Remove a specific file from a bucket | **Privileged** |
+| `move_storage_object` | Rename or move a file within or across buckets | **Privileged** |
+| `copy_storage_object` | Duplicate a file within or across buckets | **Privileged** |
+| `get_storage_object_metadata` | Get file size, MIME type, and headers | Regular |
+| `create_signed_url` | Generate a time-limited access URL | **Privileged** |
+| `empty_storage_bucket` | Bulk delete all objects in a bucket | **Privileged** |
+
+### RLS Policy Management
+| Tool | Description | Privilege |
+|------|-------------|-----------|
+| `create_rls_policy` | Create a policy with USING and WITH CHECK expressions | **Privileged** |
+| `delete_rls_policy` | Remove a policy from a table | **Privileged** |
+| `update_rls_policy` | Modify a policy's expressions | **Privileged** |
+| `enable_rls` | Enable Row-Level Security on a table | **Privileged** |
+| `disable_rls` | Disable Row-Level Security on a table | **Privileged** |
+| `force_rls` | Force RLS for table owners | **Privileged** |
+
+### Vector / AI Operations
+| Tool | Description | Privilege |
+|------|-------------|-----------|
+| `search_similar_vectors` | K-nearest neighbor vector search | Regular |
+| `insert_vector` | Insert an embedding with metadata | **Privileged** |
+| `create_vector_index` | Create an IVFFlat or HNSW vector index | **Privileged** |
+| `drop_vector_index` | Safely remove a vector index | **Privileged** |
+| `get_vector_extension_status` | Check pgvector version and installed status | Regular |
+| `optimize_vector_index` | Reindex and optimize vector indexes | **Privileged** |
+
+### Realtime Management
+| Tool | Description | Privilege |
+|------|-------------|-----------|
+| `list_realtime_publications` | Lists PostgreSQL publications (e.g. `supabase_realtime`) | Regular |
+| `create_publication` | Create a publication for realtime replication | **Privileged** |
+| `alter_publication` | Add or remove tables from a publication | **Privileged** |
+| `drop_publication` | Remove a publication | **Privileged** |
+| `list_realtime_channels` | List active realtime subscriptions | Regular |
+| `get_realtime_config` | Show realtime connection limits and config | Regular |
+| `get_replication_slots` | List logical replication slots for CDC | Regular |
+
+### Backup & Maintenance
+| Tool | Description | Privilege |
+|------|-------------|-----------|
+| `create_backup` | Create a pg_dump snapshot | **Privileged** |
+| `restore_backup` | Restore from a backup with pg_restore | **Privileged** |
+| `list_backups` | List available backup files | Regular |
+| `vacuum_analyze` | Run VACUUM ANALYZE on tables | **Privileged** |
+| `reindex_table` | Rebuild corrupted indexes | **Privileged** |
+| `analyze_table` | Update table statistics | **Privileged** |
+| `pg_terminate_backend` | Terminate a runaway query backend | **Privileged** |
+
+### Performance & Monitoring
+| Tool | Description | Privilege |
+|------|-------------|-----------|
+| `get_slow_queries` | Show top N slow queries from pg_stat_statements | Regular |
+| `get_table_sizes` | Show per-table disk usage | Regular |
+| `get_replication_lag` | Show streaming replication lag | Regular |
+| `get_locks` | Show current lock waits | Regular |
+| `get_deadlocks` | Show deadlock history | Regular |
+| `get_cache_hit_ratio` | Show buffer cache effectiveness | Regular |
+| `get_autovacuum_status` | Show table vacuum health | Regular |
+| `get_connection_pool_stats` | Show PgBouncer/Supavisor pool stats | Regular |
+
+### Batch Data Operations
+| Tool | Description | Privilege |
+|------|-------------|-----------|
+| `bulk_insert` | Insert an array of rows | **Privileged** |
+| `bulk_update` | Update matching rows in bulk | **Privileged** |
+| `bulk_delete` | Delete rows with WHERE safety checks | **Privileged** |
+| `upsert` | INSERT ... ON CONFLICT update | **Privileged** |
+| `batch_execute_sql` | Execute multiple SQL statements in one call | **Privileged** |
+| `import_csv` | Import data from CSV content | **Privileged** |
+| `export_table` | Export a table to CSV/JSON | Regular |
+
+### Edge Function Deployment
+| Tool | Description | Privilege |
+|------|-------------|-----------|
+| `deploy_edge_function` | Upload and deploy Edge Function code | **Privileged** |
+| `update_edge_function` | Redeploy an existing Edge Function | **Privileged** |
+| `delete_edge_function` | Remove an Edge Function deployment | **Privileged** |
+| `invoke_edge_function` | Invoke an Edge Function with payload | Regular |
+| `list_edge_function_secrets` | List Edge Function environment variables | Regular |
+| `set_edge_function_secret` | Set or update an Edge Function env var | **Privileged** |
 
 ### Realtime Inspection
 | Tool | Description | Privilege |
@@ -138,6 +254,18 @@ CREATE TABLE IF NOT EXISTS supabase_migrations.schema_migrations (
 **Schema difference vs. official Supabase:**
 
 The Supabase cloud platform tracks additional columns (e.g. `statements`, `dirty`). This MCP server uses the minimal schema (version + name + inserted_at) that is compatible with the Supabase CLI's local-development workflow. If your existing table has extra columns they are simply ignored.
+
+## External Access Architecture
+
+This MCP server works with self-hosted Supabase instances that may not expose the PostgreSQL port. It uses a three-tier fallback system:
+
+1. **Supabase Admin API** (`auth.admin.*`): For auth user management when `DATABASE_URL` is unavailable
+2. **Supabase Storage API** (`storage.*`): For bucket and file operations when `DATABASE_URL` is unavailable  
+3. **Service Role RPC** (`execute_sql` via `service_role`): For SQL execution when direct pg connection is unavailable
+
+**Required for external access:**
+- `SUPABASE_URL` + `SUPABASE_ANON_KEY` + `SUPABASE_SERVICE_ROLE_KEY`
+- No direct `DATABASE_URL` needed for most operations
 
 ## Setup and Installation
 

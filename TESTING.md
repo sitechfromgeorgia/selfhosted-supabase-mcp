@@ -1,5 +1,11 @@
 # Testing Guide
 
+## Test Suite Overview
+
+- **519 total tests** across 25 test files
+- **504 passing** | **15 skipped** (integration) | **0 failing**
+- Run with Bun in Docker: `docker run --rm -v "${PWD}:/app" -w /app oven/bun:1.1-alpine bun test`
+
 ## Local Testing with Your Self-Hosted Supabase
 
 1. Copy `.env.example` to `.env` and fill in your values:

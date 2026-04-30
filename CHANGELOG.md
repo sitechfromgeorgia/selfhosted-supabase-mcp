@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2026-04-30
+
+### Added
+- **83 New Tools across Phases 1-11**:
+  - Phase 1: DDL & Schema Management (12 tools)
+  - Phase 2: Storage File Operations (10 tools)
+  - Phase 3: Auth at Scale (14 tools)
+  - Phase 4: Vector / AI Operations (6 tools)
+  - Phase 5: Edge Function Deployment (6 tools)
+  - Phase 6: Realtime Management (6 tools)
+  - Phase 7: Backup & Maintenance (7 tools)
+  - Phase 8: RLS Policy Management (6 tools)
+  - Phase 9: Performance & Monitoring (8 tools)
+  - Phase 10: Batch Data Operations (7 tools)
+  - Phase 11: Final Polish (2 tools)
+- **External Access Support**: Works without `DATABASE_URL` via Supabase Admin API, Storage API, and service_role RPC fallback
+- **Supabase Admin API Fallback**: Auth tools (`list_auth_users`, `get_auth_user`, `create_auth_user`, etc.) fallback to `auth.admin.*` when direct DB unavailable
+- **Storage API Fallback**: Storage listing tools fallback to `storage.*` API when direct DB unavailable
+- **Total: 126 tools, 504 tests passing**
+
+### Fixed
+- Zod v4 compatibility: `z.record(z.any())` → `z.record(z.string(), z.any())`
+- Schema parameter defaults for undefined values in batch/vector/DDL tools
+- Edge function slug validation to allow hyphens
+- All TypeScript compilation errors (0 errors)
+- All test failures (504 pass, 0 fail)
+
 ## [Unreleased]
 
 ### Security
