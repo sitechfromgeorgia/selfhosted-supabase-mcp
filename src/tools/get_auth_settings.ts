@@ -14,7 +14,7 @@ type GetAuthSettingsInput = z.infer<typeof GetAuthSettingsInputSchema>;
 
 const GetAuthSettingsOutputSchema = z.object({
     success: z.boolean(),
-    settings: z.record(z.any()),
+    settings: z.record(z.string(), z.any()),
 });
 
 const mcpInputSchema = {

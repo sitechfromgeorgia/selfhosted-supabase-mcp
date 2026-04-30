@@ -42,11 +42,11 @@ describe.skipIf(!hasCredentials)('SelfhostedSupabaseClient Integration Tests', (
         });
 
         test('getSupabaseUrl returns correct URL', () => {
-            expect(client.getSupabaseUrl()).toBe(process.env.SUPABASE_URL);
+            expect(client.getSupabaseUrl()).toBe(process.env.SUPABASE_URL as any);
         });
 
         test('getAnonKey returns correct key', () => {
-            expect(client.getAnonKey()).toBe(process.env.SUPABASE_ANON_KEY);
+            expect(client.getAnonKey()).toBe(process.env.SUPABASE_ANON_KEY as any);
         });
 
         test('isPgAvailable reflects DATABASE_URL configuration', () => {
@@ -187,7 +187,7 @@ describe.skipIf(!hasCredentials)('SelfhostedSupabaseClient Integration Tests', (
 
             expect(Array.isArray(result)).toBe(true);
             // plpgsql is always installed
-            const hasPlpgsql = result.some((ext: { name: string }) => ext.name === 'plpgsql');
+            const hasPlpgsql = result.some((ext: any) => ext.name === 'plpgsql');
             expect(hasPlpgsql).toBe(true);
         });
 

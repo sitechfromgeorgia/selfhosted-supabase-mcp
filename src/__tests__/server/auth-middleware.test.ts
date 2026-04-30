@@ -34,7 +34,7 @@ describe('createAuthMiddleware', () => {
                 return this;
             }),
             json: mock(function (this: typeof res, body: unknown) {
-                this.body = body;
+                (this as any).body = body;
                 return this;
             }),
         } as unknown as Response;
@@ -105,8 +105,8 @@ describe('createAuthMiddleware', () => {
             middleware(req, res, next);
 
             expect(res.status).toHaveBeenCalledWith(401);
-            expect((res as { body: { error: string } }).body.error).toBe('Unauthorized');
-            expect((res as { body: { message: string } }).body.message).toContain('Invalid token');
+            expect((res as unknown as { body: { error: string } }).body.error).toBe('Unauthorized');
+            expect((res as unknown as { body: { message: string } }).body.message).toContain('Invalid token');
             expect(next).not.toHaveBeenCalled();
         });
 
@@ -117,7 +117,7 @@ describe('createAuthMiddleware', () => {
             middleware(req, res, next);
 
             expect(res.status).toHaveBeenCalledWith(401);
-            expect((res as { body: { error: string } }).body.error).toBe('Unauthorized');
+            expect((res as unknown as { body: { error: string } }).body.error).toBe('Unauthorized');
             expect(next).not.toHaveBeenCalled();
         });
     });
@@ -135,7 +135,7 @@ describe('createAuthMiddleware', () => {
             middleware(req, res, next);
 
             expect(res.status).toHaveBeenCalledWith(401);
-            expect((res as { body: { message: string } }).body.message).toContain('expired');
+            expect((res as unknown as { body: { message: string } }).body.message).toContain('expired');
             expect(next).not.toHaveBeenCalled();
         });
 
@@ -164,7 +164,7 @@ describe('createAuthMiddleware', () => {
             middleware(req, res, next);
 
             expect(res.status).toHaveBeenCalledWith(401);
-            expect((res as { body: { message: string } }).body.message).toContain('missing subject');
+            expect((res as unknown as { body: { message: string } }).body.message).toContain('missing subject');
             expect(next).not.toHaveBeenCalled();
         });
     });

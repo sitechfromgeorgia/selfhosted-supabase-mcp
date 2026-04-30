@@ -57,6 +57,7 @@ export const uploadFileTool = {
     execute: async (input: UploadFileInput, context: ToolContext) => {
         const client = context.selfhostedClient;
         const { bucket, path, content, content_type, upsert, encoding, dry_run } = input;
+        const resolvedEncoding = encoding || 'base64';
 
         const srClient = client.getServiceRoleClient();
         if (!srClient) {
@@ -66,7 +67,7 @@ export const uploadFileTool = {
         // Decode content
         let fileBuffer: Buffer;
         try {
-            if (encoding === 'base64') {
+            if (resolvedEncoding === 'base64') {
                 fileBuffer = Buffer.from(content, 'base64');
             } else {
                 fileBuffer = Buffer.from(content, 'utf-8');

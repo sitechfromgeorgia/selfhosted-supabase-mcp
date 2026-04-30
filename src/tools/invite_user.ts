@@ -11,7 +11,7 @@ import type { ToolContext, ToolPrivilegeLevel } from './types.js';
 const InviteUserInputSchema = z.object({
     email: z.string().email().describe('Email address to invite'),
     redirect_to: z.string().optional().describe('URL to redirect after sign-up'),
-    data: z.record(z.any()).optional().describe('Additional user metadata'),
+    data: z.record(z.string(), z.any()).optional().describe('Additional user metadata'),
     dry_run: z.boolean().optional().default(false),
 });
 
@@ -65,7 +65,7 @@ export const inviteUserTool = {
         if (redirect_to) options.redirectTo = redirect_to;
         if (data) options.data = data;
 
-        const { data: inviteData, error } = await srClient.auth.inviteUserByEmail(email, options);
+        const { data: inviteData, error } = await (srClient.auth as any).inviteUserByEmail(email, options);
 
         if (error) {
             throw new Error(`Failed to invite user: ${error.message}`);

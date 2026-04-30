@@ -17,7 +17,7 @@ const MAX_BATCH_SIZE = 1000;
 const BulkInsertInputSchema = z.object({
     schema: z.string().optional().default('public'),
     table: z.string().describe('Target table'),
-    rows: z.array(z.record(z.any())).min(1).max(MAX_BATCH_SIZE),
+    rows: z.array(z.record(z.string(), z.any())).min(1).max(MAX_BATCH_SIZE),
     on_conflict: z.string().optional().describe('ON CONFLICT clause (e.g., "DO NOTHING" or "DO UPDATE SET...")'),
     dry_run: z.boolean().optional().default(false),
 });
@@ -53,13 +53,14 @@ export const bulkInsertTool = {
     execute: async (input: BulkInsertInput, context: ToolContext) => {
         const client = context.selfhostedClient;
         const { schema, table, rows, on_conflict, dry_run } = input;
+        const resolvedSchema = schema || 'public';
 
         if (!client.isPgAvailable()) {
             throw new Error('Direct database connection (DATABASE_URL) is required.');
         }
 
         validateIdentifiers([
-            { name: schema, context: 'Schema' },
+            { name: resolvedSchema, context: 'Schema' },
             { name: table, context: 'Table' },
         ]);
 
@@ -70,7 +71,7 @@ export const bulkInsertTool = {
         const columns = Object.keys(rows[0]);
         validateIdentifiers(columns.map((c) => ({ name: c, context: 'Column' })));
 
-        const tableRef = `${quoteIdentifier(schema)}.${quoteIdentifier(table)}`;
+        const tableRef = `${quoteIdentifier(resolvedSchema)}.${quoteIdentifier(table)}`;
         const colList = columns.map(quoteIdentifier).join(', ');
 
         // Build value placeholders

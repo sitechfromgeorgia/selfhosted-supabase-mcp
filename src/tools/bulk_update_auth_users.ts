@@ -18,8 +18,8 @@ const UserUpdateSchema = z.object({
     user_id: z.string().uuid(),
     role: z.string().optional(),
     email: z.string().email().optional(),
-    user_metadata: z.record(z.any()).optional(),
-    app_metadata: z.record(z.any()).optional(),
+    user_metadata: z.record(z.string(), z.any()).optional(),
+    app_metadata: z.record(z.string(), z.any()).optional(),
     email_confirmed: z.boolean().optional(),
     banned_until: z.string().optional().describe('ISO 8601 timestamp or null to unban'),
 });

@@ -7,7 +7,7 @@ describe('get_auth_user tool', () => {
         const userId = '550e8400-e29b-41d4-a716-446655440001';
         const mockClient = createMockClient({ pgAvailable: true });
         // Override executeTransactionWithPg to return a user
-        mockClient.executeTransactionWithPg = async <T>(callback: (client: unknown) => Promise<T>) => {
+        (mockClient.executeTransactionWithPg as any) = async <T>(callback: (client: unknown) => Promise<T>) => {
             const mockPgClient = {
                 query: async () => ({
                     rows: [{
@@ -35,7 +35,7 @@ describe('get_auth_user tool', () => {
     test('throws error when user not found', async () => {
         const userId = '550e8400-e29b-41d4-a716-446655440999';
         const mockClient = createMockClient({ pgAvailable: true });
-        mockClient.executeTransactionWithPg = async <T>(callback: (client: unknown) => Promise<T>) => {
+        (mockClient.executeTransactionWithPg as any) = async <T>(callback: (client: unknown) => Promise<T>) => {
             const mockPgClient = {
                 query: async () => ({ rows: [] }),
             };
@@ -47,7 +47,7 @@ describe('get_auth_user tool', () => {
     });
 
     test('throws error when pg is not available', async () => {
-        const mockClient = createMockClient({ pgAvailable: false });
+        const mockClient = createMockClient({ pgAvailable: false, serviceRoleAvailable: false });
         const context = createMockContext(mockClient);
 
         expect(
@@ -55,7 +55,7 @@ describe('get_auth_user tool', () => {
                 { user_id: '550e8400-e29b-41d4-a716-446655440001' },
                 context
             )
-        ).rejects.toThrow('Direct database connection');
+        ).rejects.toThrow('Neither Supabase service role key (for Admin API) nor direct database connection (DATABASE_URL) is available. Cannot get auth user.');
     });
 
     test('throws error for invalid UUID', async () => {

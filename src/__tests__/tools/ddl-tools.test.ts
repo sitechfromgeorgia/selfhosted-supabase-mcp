@@ -163,8 +163,7 @@ describe('create_table tool', () => {
                     { name: 'email', type: 'text', unique: true, nullable: false },
                     { name: 'created_at', type: 'timestamptz', nullable: false, default_value: 'now()' },
                 ],
-                add_id_column: false,
-                add_timestamps: false,
+                if_not_exists: true,
                 dry_run: true,
             } as any,
             mockContext()
@@ -182,17 +181,21 @@ describe('create_table tool', () => {
         const result = await createTableTool.execute(
             {
                 table: 'posts',
-                columns: [{ name: 'title', type: 'text', nullable: true, primary_key: false, unique: false }],
-                add_id_column: true,
-                add_timestamps: true,
+                columns: [
+                    { name: 'id', type: 'uuid', default_value: 'gen_random_uuid()', primary_key: true, nullable: false },
+                    { name: 'title', type: 'text', nullable: true },
+                    { name: 'created_at', type: 'timestamptz', default_value: 'now()', nullable: false },
+                    { name: 'updated_at', type: 'timestamptz', default_value: 'now()', nullable: false },
+                ],
+                if_not_exists: true,
                 dry_run: true,
             } as any,
             mockContext()
         );
 
-        expect(result.sql).toContain('id uuid DEFAULT gen_random_uuid() PRIMARY KEY');
-        expect(result.sql).toContain('created_at timestamptz DEFAULT now()');
-        expect(result.sql).toContain('updated_at timestamptz DEFAULT now()');
+        expect(result.sql).toContain('id uuid NOT NULL PRIMARY KEY DEFAULT gen_random_uuid()');
+        expect(result.sql).toContain('created_at timestamptz NOT NULL DEFAULT now()');
+        expect(result.sql).toContain('updated_at timestamptz NOT NULL DEFAULT now()');
     });
 
     test('rejects invalid table names', async () => {
@@ -460,7 +463,7 @@ describe('drop_index tool', () => {
         );
 
         expect(result.success).toBe(true);
-        expect(result.sql).toBe('DROP INDEX IF EXISTS public."idx_users_email";');
+        expect(result.sql).toBe('DROP INDEX IF EXISTS public.idx_users_email;');
     });
 
     test('generates DROP INDEX CONCURRENTLY', async () => {

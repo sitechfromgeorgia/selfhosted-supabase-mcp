@@ -115,16 +115,17 @@ export const alterTableTool = {
     execute: async (input: AlterTableInput, context: ToolContext) => {
         const client = context.selfhostedClient;
         const { schema, table, operations, dry_run } = input;
+        const resolvedSchema = schema || 'public';
 
         // Validate identifiers
-        const identifiers = [{ name: schema, context: 'Schema' }, { name: table, context: 'Table' }];
+        const identifiers = [{ name: resolvedSchema, context: 'Schema' }, { name: table, context: 'Table' }];
         for (const op of operations) {
             identifiers.push({ name: op.column, context: 'Column' });
             if ('new_name' in op) identifiers.push({ name: op.new_name, context: 'New column name' });
         }
         validateIdentifiers(identifiers);
 
-        const tableRef = `${quoteIdentifier(schema)}.${quoteIdentifier(table)}`;
+        const tableRef = `${quoteIdentifier(resolvedSchema)}.${quoteIdentifier(table)}`;
         const sqlStatements: string[] = [];
 
         for (const op of operations) {

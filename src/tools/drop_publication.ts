@@ -45,7 +45,8 @@ export const dropPublicationTool = {
 
     execute: async (input: DropPublicationInput, context: ToolContext) => {
         const client = context.selfhostedClient;
-        const { name, if_exists, dry_run } = input;
+        const { name, if_exists: ifExistsInput, dry_run } = input;
+        const if_exists = ifExistsInput ?? true;
 
         if (!client.isPgAvailable()) {
             throw new Error('Direct database connection (DATABASE_URL) is required.');

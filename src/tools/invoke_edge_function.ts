@@ -10,8 +10,8 @@ import type { ToolContext, ToolPrivilegeLevel } from './types.js';
 
 const InvokeEdgeFunctionInputSchema = z.object({
     function_name: z.string().describe('Function slug to invoke'),
-    payload: z.record(z.any()).optional().describe('JSON payload to send'),
-    headers: z.record(z.string()).optional().describe('Custom HTTP headers'),
+    payload: z.record(z.string(), z.any()).optional().describe('JSON payload to send'),
+    headers: z.record(z.string(), z.string()).optional().describe('Custom HTTP headers'),
     method: z.enum(['POST', 'GET']).optional().default('POST'),
 });
 

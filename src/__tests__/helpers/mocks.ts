@@ -37,6 +37,21 @@ export interface MockSupabaseClient {
             deleteUser: ReturnType<typeof mock>;
         };
     };
+    storage: {
+        listBuckets: ReturnType<typeof mock>;
+        from: (bucket: string) => {
+            list: ReturnType<typeof mock>;
+            upload: ReturnType<typeof mock>;
+            download: ReturnType<typeof mock>;
+            remove: ReturnType<typeof mock>;
+            move: ReturnType<typeof mock>;
+            copy: ReturnType<typeof mock>;
+            getPublicUrl: ReturnType<typeof mock>;
+            createSignedUrl: ReturnType<typeof mock>;
+            getMetadata: ReturnType<typeof mock>;
+            empty: ReturnType<typeof mock>;
+        };
+    };
     rpc: ReturnType<typeof mock>;
 }
 
@@ -54,6 +69,22 @@ export function createMockSupabaseClient(overrides?: Partial<MockSupabaseClient>
                 deleteUser: mock(() => Promise.resolve({ data: null, error: null })),
                 ...overrides?.auth?.admin,
             },
+        },
+        storage: {
+            listBuckets: mock(() => Promise.resolve({ data: [], error: null })),
+            from: (_bucket: string) => ({
+                list: mock(() => Promise.resolve({ data: [], error: null })),
+                upload: mock(() => Promise.resolve({ data: { path: '' }, error: null })),
+                download: mock(() => Promise.resolve({ data: { blob: () => Promise.resolve(new Blob()) }, error: null })),
+                remove: mock(() => Promise.resolve({ data: [], error: null })),
+                move: mock(() => Promise.resolve({ data: { message: 'success' }, error: null })),
+                copy: mock(() => Promise.resolve({ data: { message: 'success' }, error: null })),
+                getPublicUrl: mock(() => Promise.resolve({ data: { publicUrl: '' }, error: null })),
+                createSignedUrl: mock(() => Promise.resolve({ data: { signedUrl: '' }, error: null })),
+                getMetadata: mock(() => Promise.resolve({ data: {}, error: null })),
+                empty: mock(() => Promise.resolve({ data: { message: 'success' }, error: null })),
+            }),
+            ...overrides?.storage,
         },
         rpc: mock(() => Promise.resolve({ data: [], error: null })),
         ...overrides,
@@ -99,6 +130,7 @@ export function createMockClient(options: MockClientOptions = {}): SelfhostedSup
         getServiceRoleKey: () => (serviceRoleKey ? serviceRoleKey : undefined),
         getJwtSecret: () => (jwtSecret ? jwtSecret : undefined),
         getDbUrl: () => (pgAvailable ? dbUrl : undefined),
+        getServiceRoleClient: () => (serviceRoleAvailable ? supabaseClient as any : null),
     } as unknown as SelfhostedSupabaseClient;
 
     return mockClient;

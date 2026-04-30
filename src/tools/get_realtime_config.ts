@@ -12,7 +12,7 @@ const GetRealtimeConfigInputSchema = z.object({});
 
 const GetRealtimeConfigOutputSchema = z.object({
     success: z.boolean(),
-    config: z.record(z.any()),
+    config: z.record(z.string(), z.any()),
 });
 
 const mcpInputSchema = {
@@ -29,7 +29,7 @@ export const getRealtimeConfigTool = {
     mcpInputSchema: mcpInputSchema,
     outputSchema: GetRealtimeConfigOutputSchema,
 
-    execute: async (input: typeof GetRealtimeConfigInputSchema._type, context: ToolContext) => {
+    execute: async (input: z.infer<typeof GetRealtimeConfigInputSchema>, context: ToolContext) => {
         const client = context.selfhostedClient;
 
         if (!client.isPgAvailable()) {

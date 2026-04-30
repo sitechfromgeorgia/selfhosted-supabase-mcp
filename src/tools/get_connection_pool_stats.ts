@@ -23,8 +23,8 @@ const GetConnectionPoolStatsOutputSchema = z.object({
     max_connections: z.number(),
     usage_percent: z.number(),
     states: z.array(PoolStatsSchema),
-    top_databases: z.array(z.record(z.any())),
-    top_users: z.array(z.record(z.any())),
+    top_databases: z.array(z.record(z.string(), z.any())),
+    top_users: z.array(z.record(z.string(), z.any())),
 });
 
 const mcpInputSchema = {
@@ -41,7 +41,7 @@ export const getConnectionPoolStatsTool = {
     mcpInputSchema: mcpInputSchema,
     outputSchema: GetConnectionPoolStatsOutputSchema,
 
-    execute: async (input: typeof GetConnectionPoolStatsInputSchema._type, context: ToolContext) => {
+    execute: async (input: z.infer<typeof GetConnectionPoolStatsInputSchema>, context: ToolContext) => {
         const client = context.selfhostedClient;
 
         if (!client.isPgAvailable()) {

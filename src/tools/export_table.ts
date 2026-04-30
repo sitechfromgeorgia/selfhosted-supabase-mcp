@@ -53,18 +53,19 @@ export const exportTableTool = {
     execute: async (input: ExportTableInput, context: ToolContext) => {
         const client = context.selfhostedClient;
         const { schema, table, format, columns, where, limit, include_header } = input;
+        const resolvedSchema = schema || 'public';
 
         if (!client.isPgAvailable()) {
             throw new Error('Direct database connection (DATABASE_URL) is required.');
         }
 
         validateIdentifiers([
-            { name: schema, context: 'Schema' },
+            { name: resolvedSchema, context: 'Schema' },
             { name: table, context: 'Table' },
             ...(columns || []).map((c) => ({ name: c, context: 'Column' })),
         ]);
 
-        const tableRef = `${quoteIdentifier(schema)}.${quoteIdentifier(table)}`;
+        const tableRef = `${quoteIdentifier(resolvedSchema)}.${quoteIdentifier(table)}`;
         const colList = columns ? columns.map(quoteIdentifier).join(', ') : '*';
 
         let sql = `SELECT ${colList} FROM ${tableRef}`;

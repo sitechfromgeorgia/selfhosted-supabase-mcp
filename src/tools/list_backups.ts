@@ -40,8 +40,8 @@ export const listBackupsTool = {
     mcpInputSchema: mcpInputSchema,
     outputSchema: ListBackupsOutputSchema,
 
-    execute: async (input: typeof ListBackupsInputSchema._type, context: ToolContext) => {
-        const backupDir = path.join(context.workspacePath, 'backups');
+    execute: async (input: z.infer<typeof ListBackupsInputSchema>, context: ToolContext) => {
+        const backupDir = path.join(context.workspacePath ?? '/tmp', 'backups');
 
         if (!fs.existsSync(backupDir)) {
             return {

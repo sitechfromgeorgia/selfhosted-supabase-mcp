@@ -51,17 +51,18 @@ export const bulkDeleteTool = {
     execute: async (input: BulkDeleteInput, context: ToolContext) => {
         const client = context.selfhostedClient;
         const { schema, table, where, limit, dry_run } = input;
+        const resolvedSchema = schema || 'public';
 
         if (!client.isPgAvailable()) {
             throw new Error('Direct database connection (DATABASE_URL) is required.');
         }
 
         validateIdentifiers([
-            { name: schema, context: 'Schema' },
+            { name: resolvedSchema, context: 'Schema' },
             { name: table, context: 'Table' },
         ]);
 
-        const tableRef = `${quoteIdentifier(schema)}.${quoteIdentifier(table)}`;
+        const tableRef = `${quoteIdentifier(resolvedSchema)}.${quoteIdentifier(table)}`;
 
         // Preview count in dry-run
         if (dry_run) {

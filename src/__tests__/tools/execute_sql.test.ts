@@ -84,7 +84,7 @@ describe('executeSqlTool', () => {
             });
             const context = createMockContext(mockClient);
 
-            const result = await executeSqlTool.execute({ sql: 'SELECT * FROM users' }, context);
+            const result = await executeSqlTool.execute({ sql: 'SELECT * FROM users', read_only: false }, context);
 
             expect(result).toEqual(expectedRows);
         });
@@ -97,7 +97,7 @@ describe('executeSqlTool', () => {
             const context = createMockContext(mockClient);
 
             const result = await executeSqlTool.execute(
-                { sql: 'SELECT * FROM users WHERE 1=0' },
+                { sql: 'SELECT * FROM users WHERE 1=0', read_only: false },
                 context
             );
 
@@ -112,7 +112,7 @@ describe('executeSqlTool', () => {
             const context = createMockContext(mockClient);
 
             await expect(
-                executeSqlTool.execute({ sql: 'INVALID SQL' }, context)
+                executeSqlTool.execute({ sql: 'INVALID SQL', read_only: false }, context)
             ).rejects.toThrow('SQL Error (42601): syntax error at position 1');
         });
 
@@ -123,7 +123,7 @@ describe('executeSqlTool', () => {
             });
             const context = createMockContext(mockClient);
 
-            await executeSqlTool.execute({ sql: 'SELECT 1 as result' }, context);
+            await executeSqlTool.execute({ sql: 'SELECT 1 as result', read_only: false }, context);
 
             expect(mockClient.executeSqlWithPg).toHaveBeenCalled();
             expect(mockClient.executeSqlViaRpc).not.toHaveBeenCalled();
@@ -137,7 +137,7 @@ describe('executeSqlTool', () => {
             });
             const context = createMockContext(mockClient);
 
-            await executeSqlTool.execute({ sql: 'SELECT 1 as result' }, context);
+            await executeSqlTool.execute({ sql: 'SELECT 1 as result', read_only: false }, context);
 
             expect(mockClient.executeSqlViaServiceRoleRpc).toHaveBeenCalled();
         });
@@ -166,7 +166,7 @@ describe('executeSqlTool', () => {
             const context = createMockContext(mockClient);
 
             await expect(
-                executeSqlTool.execute({ sql: 'SELECT 1' }, context)
+                executeSqlTool.execute({ sql: 'SELECT 1', read_only: false }, context)
             ).rejects.toThrow('execute_sql requires either a direct database connection');
         });
 
@@ -186,7 +186,7 @@ describe('executeSqlTool', () => {
             const context = createMockContext(mockClient);
 
             const result = await executeSqlTool.execute(
-                { sql: 'SELECT * FROM complex_table' },
+                { sql: 'SELECT * FROM complex_table', read_only: false },
                 context
             );
 
@@ -202,7 +202,7 @@ describe('executeSqlTool', () => {
             const context = createMockContext(mockClient);
 
             const result = await executeSqlTool.execute(
-                { sql: "INSERT INTO users (name) VALUES ('test') RETURNING id" },
+                { sql: "INSERT INTO users (name) VALUES ('test') RETURNING id", read_only: false },
                 context
             );
 
@@ -217,7 +217,7 @@ describe('executeSqlTool', () => {
             const context = createMockContext(mockClient);
 
             const result = await executeSqlTool.execute(
-                { sql: "UPDATE users SET name = 'test' WHERE id = -1" },
+                { sql: "UPDATE users SET name = 'test' WHERE id = -1", read_only: false },
                 context
             );
 

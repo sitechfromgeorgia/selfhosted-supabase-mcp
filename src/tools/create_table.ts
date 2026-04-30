@@ -98,10 +98,11 @@ export const createTableTool = {
     execute: async (input: CreateTableInput, context: ToolContext) => {
         const client = context.selfhostedClient;
         const { schema, table, columns, if_not_exists, dry_run } = input;
+        const resolvedSchema = schema || 'public';
 
         // SECURITY: Validate all identifiers
         const identifiersToValidate = [
-            { name: schema, context: 'Schema name' },
+            { name: resolvedSchema, context: 'Schema name' },
             { name: table, context: 'Table name' },
             ...columns.map((col) => ({ name: col.name, context: `Column name` })),
             ...columns
@@ -144,7 +145,7 @@ export const createTableTool = {
 
         // Build CREATE TABLE SQL
         const ifNotExistsClause = if_not_exists ? 'IF NOT EXISTS ' : '';
-        const tableRef = `${quoteIdentifier(schema)}.${quoteIdentifier(table)}`;
+        const tableRef = `${quoteIdentifier(resolvedSchema)}.${quoteIdentifier(table)}`;
 
         const sql = `CREATE TABLE ${ifNotExistsClause}${tableRef} (
     ${columnDefs.join(',\n    ')}

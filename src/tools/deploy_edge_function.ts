@@ -56,12 +56,16 @@ export const deployEdgeFunctionTool = {
             throw new Error('Direct database connection (DATABASE_URL) is required.');
         }
 
-        validateIdentifiers([
-            { name, context: 'Function name' },
-            { name: slug, context: 'Function slug' },
-        ]);
+        // Edge function names and slugs allow hyphens (URL-friendly)
+        const slugRegex = /^[a-z0-9._-]+$/i;
+        if (!slugRegex.test(name)) {
+            throw new Error(`Invalid function name "${name}". Use only a-z, 0-9, ., _, and -.`);
+        }
+        if (!slugRegex.test(slug)) {
+            throw new Error(`Invalid function slug "${slug}". Use only a-z, 0-9, ., _, and -.`);
+        }
 
-        const note = 'NOTE: This tool only registers metadata. To fully deploy, run: supabase functions deploy ' + slug;
+        const note = 'NOTE: This tool only registers metadata. To fully deploy using Supabase CLI, run: supabase functions deploy ' + slug;
 
         if (dry_run) {
             return {

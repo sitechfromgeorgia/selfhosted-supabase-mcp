@@ -25,7 +25,7 @@ const GetStorageObjectMetadataOutputSchema = z.object({
     created_at: z.string().nullable(),
     updated_at: z.string().nullable(),
     last_accessed_at: z.string().nullable(),
-    metadata: z.record(z.any()).nullable(),
+    metadata: z.record(z.string(), z.any()).nullable(),
 });
 
 const mcpInputSchema = {

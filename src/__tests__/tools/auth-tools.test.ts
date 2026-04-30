@@ -70,56 +70,56 @@ describe('listAuthUsersTool', () => {
 
     describe('execute', () => {
         test('returns list of users', async () => {
-            const mockClient = createMockClient({
+            const mockClient = createMockClient({ serviceRoleAvailable: false,
                 pgAvailable: true,
                 pgResult: createSuccessResponse(testData.users),
             });
             const context = createMockContext(mockClient);
 
-            const result = await listAuthUsersTool.execute({}, context);
+            const result = await listAuthUsersTool.execute({ limit: 10, offset: 0 }, context);
 
             expect(result).toEqual(testData.users);
         });
 
         test('returns empty array when no users', async () => {
-            const mockClient = createMockClient({
+            const mockClient = createMockClient({ serviceRoleAvailable: false,
                 pgAvailable: true,
                 pgResult: createSuccessResponse([]),
             });
             const context = createMockContext(mockClient);
 
-            const result = await listAuthUsersTool.execute({}, context);
+            const result = await listAuthUsersTool.execute({ limit: 10, offset: 0 }, context);
 
             expect(result).toEqual([]);
         });
 
         test('throws error when pg is not available', async () => {
-            const mockClient = createMockClient({ pgAvailable: false });
+            const mockClient = createMockClient({ serviceRoleAvailable: false, pgAvailable: false });
             const context = createMockContext(mockClient);
 
-            await expect(listAuthUsersTool.execute({}, context)).rejects.toThrow(
-                'Direct database connection'
+            await expect(listAuthUsersTool.execute({ limit: 10, offset: 0 }, context)).rejects.toThrow(
+                'Neither Supabase service role key'
             );
         });
 
         test('throws error on SQL failure', async () => {
-            const mockClient = createMockClient({
+            const mockClient = createMockClient({ serviceRoleAvailable: false,
                 pgAvailable: true,
                 pgResult: createErrorResponse('permission denied for table users', '42501'),
             });
             const context = createMockContext(mockClient);
 
-            await expect(listAuthUsersTool.execute({}, context)).rejects.toThrow('SQL Error');
+            await expect(listAuthUsersTool.execute({ limit: 10, offset: 0 }, context)).rejects.toThrow('SQL Error');
         });
 
         test('uses pg connection directly (not RPC)', async () => {
-            const mockClient = createMockClient({
+            const mockClient = createMockClient({ serviceRoleAvailable: false,
                 pgAvailable: true,
                 pgResult: createSuccessResponse([]),
             });
             const context = createMockContext(mockClient);
 
-            await listAuthUsersTool.execute({}, context);
+            await listAuthUsersTool.execute({ limit: 10, offset: 0 }, context);
 
             expect(mockClient.executeSqlWithPg).toHaveBeenCalled();
             expect(mockClient.executeSqlViaRpc).not.toHaveBeenCalled();
@@ -214,7 +214,7 @@ describe('createAuthUserTool', () => {
 
     describe('execute', () => {
         test('throws error when pg is not available', async () => {
-            const mockClient = createMockClient({ pgAvailable: false });
+            const mockClient = createMockClient({ serviceRoleAvailable: false, pgAvailable: false });
             const context = createMockContext(mockClient);
 
             await expect(
@@ -222,7 +222,7 @@ describe('createAuthUserTool', () => {
                     { email: 'test@example.com', password: 'password123' },
                     context
                 )
-            ).rejects.toThrow('Direct database connection');
+            ).rejects.toThrow('Neither Supabase service role key');
         });
 
         test('creates user via transaction', async () => {
@@ -247,7 +247,7 @@ describe('createAuthUserTool', () => {
                 }),
             };
 
-            const mockClient = createMockClient({ pgAvailable: true });
+            const mockClient = createMockClient({ serviceRoleAvailable: false, pgAvailable: true });
             (mockClient.executeTransactionWithPg as ReturnType<typeof mock>).mockImplementation(
                 async (callback: (client: unknown) => Promise<unknown>) => {
                     return callback(mockPgClient);
@@ -273,7 +273,7 @@ describe('createAuthUserTool', () => {
                 }),
             };
 
-            const mockClient = createMockClient({ pgAvailable: true });
+            const mockClient = createMockClient({ serviceRoleAvailable: false, pgAvailable: true });
             (mockClient.executeTransactionWithPg as ReturnType<typeof mock>).mockImplementation(
                 async (callback: (client: unknown) => Promise<unknown>) => {
                     return callback(mockPgClient);
@@ -301,7 +301,7 @@ describe('createAuthUserTool', () => {
                 }),
             };
 
-            const mockClient = createMockClient({ pgAvailable: true });
+            const mockClient = createMockClient({ serviceRoleAvailable: false, pgAvailable: true });
             (mockClient.executeTransactionWithPg as ReturnType<typeof mock>).mockImplementation(
                 async (callback: (client: unknown) => Promise<unknown>) => {
                     return callback(mockPgClient);
@@ -351,7 +351,7 @@ describe('deleteAuthUserTool', () => {
 
     describe('execute', () => {
         test('throws error when pg is not available', async () => {
-            const mockClient = createMockClient({ pgAvailable: false });
+            const mockClient = createMockClient({ serviceRoleAvailable: false, pgAvailable: false });
             const context = createMockContext(mockClient);
 
             await expect(
@@ -359,7 +359,7 @@ describe('deleteAuthUserTool', () => {
                     { user_id: '123e4567-e89b-12d3-a456-426614174000' },
                     context
                 )
-            ).rejects.toThrow('Direct database connection');
+            ).rejects.toThrow('Neither Supabase service role key');
         });
 
         test('returns success when user is deleted', async () => {
@@ -367,7 +367,7 @@ describe('deleteAuthUserTool', () => {
                 query: mock(async () => ({ rowCount: 1 })),
             };
 
-            const mockClient = createMockClient({ pgAvailable: true });
+            const mockClient = createMockClient({ serviceRoleAvailable: false, pgAvailable: true });
             (mockClient.executeTransactionWithPg as ReturnType<typeof mock>).mockImplementation(
                 async (callback: (client: unknown) => Promise<unknown>) => {
                     return callback(mockPgClient);
@@ -389,7 +389,7 @@ describe('deleteAuthUserTool', () => {
                 query: mock(async () => ({ rowCount: 0 })),
             };
 
-            const mockClient = createMockClient({ pgAvailable: true });
+            const mockClient = createMockClient({ serviceRoleAvailable: false, pgAvailable: true });
             (mockClient.executeTransactionWithPg as ReturnType<typeof mock>).mockImplementation(
                 async (callback: (client: unknown) => Promise<unknown>) => {
                     return callback(mockPgClient);
@@ -413,7 +413,7 @@ describe('deleteAuthUserTool', () => {
                 }),
             };
 
-            const mockClient = createMockClient({ pgAvailable: true });
+            const mockClient = createMockClient({ serviceRoleAvailable: false, pgAvailable: true });
             (mockClient.executeTransactionWithPg as ReturnType<typeof mock>).mockImplementation(
                 async (callback: (client: unknown) => Promise<unknown>) => {
                     return callback(mockPgClient);
@@ -532,7 +532,7 @@ describe('updateAuthUserTool', () => {
 
     describe('execute', () => {
         test('throws error when pg is not available', async () => {
-            const mockClient = createMockClient({ pgAvailable: false });
+            const mockClient = createMockClient({ serviceRoleAvailable: false, pgAvailable: false });
             const context = createMockContext(mockClient);
 
             await expect(
@@ -543,7 +543,7 @@ describe('updateAuthUserTool', () => {
                     },
                     context
                 )
-            ).rejects.toThrow('Direct database connection');
+            ).rejects.toThrow('Neither Supabase service role key');
         });
 
         test('updates user via transaction', async () => {
@@ -562,7 +562,7 @@ describe('updateAuthUserTool', () => {
                 query: mock(async () => ({ rows: [updatedUser] })),
             };
 
-            const mockClient = createMockClient({ pgAvailable: true });
+            const mockClient = createMockClient({ serviceRoleAvailable: false, pgAvailable: true });
             (mockClient.executeTransactionWithPg as ReturnType<typeof mock>).mockImplementation(
                 async (callback: (client: unknown) => Promise<unknown>) => {
                     return callback(mockPgClient);
@@ -586,7 +586,7 @@ describe('updateAuthUserTool', () => {
                 query: mock(async () => ({ rows: [] })),
             };
 
-            const mockClient = createMockClient({ pgAvailable: true });
+            const mockClient = createMockClient({ serviceRoleAvailable: false, pgAvailable: true });
             (mockClient.executeTransactionWithPg as ReturnType<typeof mock>).mockImplementation(
                 async (callback: (client: unknown) => Promise<unknown>) => {
                     return callback(mockPgClient);
@@ -615,7 +615,7 @@ describe('updateAuthUserTool', () => {
                 }),
             };
 
-            const mockClient = createMockClient({ pgAvailable: true });
+            const mockClient = createMockClient({ serviceRoleAvailable: false, pgAvailable: true });
             (mockClient.executeTransactionWithPg as ReturnType<typeof mock>).mockImplementation(
                 async (callback: (client: unknown) => Promise<unknown>) => {
                     return callback(mockPgClient);

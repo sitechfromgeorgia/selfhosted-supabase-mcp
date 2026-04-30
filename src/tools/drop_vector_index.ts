@@ -51,20 +51,21 @@ export const dropVectorIndexTool = {
     execute: async (input: DropVectorIndexInput, context: ToolContext) => {
         const client = context.selfhostedClient;
         const { schema, index_name, if_exists, concurrently, dry_run } = input;
+        const resolvedSchema = schema || 'public';
 
         if (!client.isPgAvailable()) {
             throw new Error('Direct database connection (DATABASE_URL) is required.');
         }
 
         validateIdentifiers([
-            { name: schema, context: 'Schema' },
+            { name: resolvedSchema, context: 'Schema' },
             { name: index_name, context: 'Index name' },
         ]);
 
         const concurrentlyClause = concurrently ? 'CONCURRENTLY ' : '';
         const ifExistsClause = if_exists ? 'IF EXISTS ' : '';
 
-        const sql = `DROP INDEX ${concurrentlyClause}${ifExistsClause}${quoteIdentifier(schema)}.${quoteIdentifier(index_name)};`;
+        const sql = `DROP INDEX ${concurrentlyClause}${ifExistsClause}${quoteIdentifier(resolvedSchema)}.${quoteIdentifier(index_name)};`;
 
         if (dry_run) {
             return {

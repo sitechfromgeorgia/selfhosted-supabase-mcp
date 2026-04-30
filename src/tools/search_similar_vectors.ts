@@ -18,7 +18,7 @@ const SearchSimilarVectorsInputSchema = z.object({
     query_vector: z.array(z.number()).describe('Query embedding array (e.g., [0.1, 0.2, ...])'),
     top_k: z.number().int().positive().max(1000).optional().default(10),
     distance_metric: DistanceMetricSchema.optional().default('cosine'),
-    filters: z.record(z.any()).optional().describe('Additional WHERE clause filters (JSON)'),
+    filters: z.record(z.string(), z.any()).optional().describe('Additional WHERE clause filters (JSON)'),
     include_vector: z.boolean().optional().default(false).describe('Include the vector in results'),
     dry_run: z.boolean().optional().default(false),
 });
@@ -27,7 +27,7 @@ type SearchSimilarVectorsInput = z.infer<typeof SearchSimilarVectorsInputSchema>
 
 const SearchSimilarVectorsOutputSchema = z.object({
     success: z.boolean(),
-    results: z.array(z.record(z.any())),
+    results: z.array(z.record(z.string(), z.any())),
     count: z.number(),
     distance_metric: z.string(),
     query_dimensions: z.number(),
@@ -60,18 +60,20 @@ export const searchSimilarVectorsTool = {
     execute: async (input: SearchSimilarVectorsInput, context: ToolContext) => {
         const client = context.selfhostedClient;
         const { schema, table, column, query_vector, top_k, distance_metric, filters, include_vector, dry_run } = input;
+        const resolvedSchema = schema || 'public';
+        const resolvedDistanceMetric = distance_metric || 'cosine';
 
         if (!client.isPgAvailable()) {
             throw new Error('Direct database connection (DATABASE_URL) is required for vector search.');
         }
 
         validateIdentifiers([
-            { name: schema, context: 'Schema' },
+            { name: resolvedSchema, context: 'Schema' },
             { name: table, context: 'Table' },
             { name: column, context: 'Column' },
         ]);
 
-        const tableRef = `${quoteIdentifier(schema)}.${quoteIdentifier(table)}`;
+        const tableRef = `${quoteIdentifier(resolvedSchema)}.${quoteIdentifier(table)}`;
         const vectorLiteral = `'[${query_vector.join(',')}]'`;
 
         const operatorMap = {
@@ -79,7 +81,7 @@ export const searchSimilarVectorsTool = {
             cosine: '<=>',
             inner_product: '<#>',
         };
-        const operator = operatorMap[distance_metric];
+        const operator = operatorMap[resolvedDistanceMetric];
 
         const selectCols = include_vector
             ? '*'
@@ -111,12 +113,12 @@ export const searchSimilarVectorsTool = {
                 success: true,
                 results: [],
                 count: 0,
-                distance_metric,
+                distance_metric: resolvedDistanceMetric,
                 query_dimensions: query_vector.length,
             };
         }
 
-        context.log(`Searching ${top_k} nearest neighbors in ${schema}.${table}...`, 'info');
+        context.log(`Searching ${top_k} nearest neighbors in ${resolvedSchema}.${table}...`, 'info');
 
         const result = await client.executeSqlWithPg(sql, params);
 
@@ -130,7 +132,7 @@ export const searchSimilarVectorsTool = {
             success: true,
             results: rows,
             count: rows.length,
-            distance_metric,
+            distance_metric: resolvedDistanceMetric,
             query_dimensions: query_vector.length,
         };
     },

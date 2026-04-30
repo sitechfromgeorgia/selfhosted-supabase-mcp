@@ -12,7 +12,7 @@ import { validateIdentifiers, quoteIdentifier } from './ddl-utils.js';
 const UpsertInputSchema = z.object({
     schema: z.string().optional().default('public'),
     table: z.string().describe('Target table'),
-    data: z.record(z.any()).describe('Row data to insert'),
+    data: z.record(z.string(), z.any()).describe('Row data to insert'),
     conflict_columns: z.array(z.string()).min(1).describe('Columns to detect conflict on'),
     update_columns: z.array(z.string()).optional().describe('Columns to update on conflict (omit for all)'),
     dry_run: z.boolean().optional().default(false),
@@ -49,6 +49,7 @@ export const upsertTool = {
     execute: async (input: UpsertInput, context: ToolContext) => {
         const client = context.selfhostedClient;
         const { schema, table, data, conflict_columns, update_columns, dry_run } = input;
+        const resolvedSchema = schema || 'public';
 
         if (!client.isPgAvailable()) {
             throw new Error('Direct database connection (DATABASE_URL) is required.');
@@ -56,13 +57,13 @@ export const upsertTool = {
 
         const columns = Object.keys(data);
         validateIdentifiers([
-            { name: schema, context: 'Schema' },
+            { name: resolvedSchema, context: 'Schema' },
             { name: table, context: 'Table' },
             ...columns.map((c) => ({ name: c, context: 'Column' })),
             ...conflict_columns.map((c) => ({ name: c, context: 'Conflict column' })),
         ]);
 
-        const tableRef = `${quoteIdentifier(schema)}.${quoteIdentifier(table)}`;
+        const tableRef = `${quoteIdentifier(resolvedSchema)}.${quoteIdentifier(table)}`;
         const colList = columns.map(quoteIdentifier).join(', ');
 
         const placeholders: string[] = [];

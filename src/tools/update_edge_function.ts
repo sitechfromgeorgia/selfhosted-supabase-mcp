@@ -53,7 +53,7 @@ export const updateEdgeFunctionTool = {
             throw new Error('Direct database connection (DATABASE_URL) is required.');
         }
 
-        const note = 'NOTE: This tool only updates metadata. To update code, run: supabase functions deploy ' + slug;
+        const note = 'NOTE: This tool only updates metadata. To update code using Supabase CLI, run: supabase functions deploy ' + slug;
 
         const sets: string[] = ['updated_at = now()'];
         const params: any[] = [];

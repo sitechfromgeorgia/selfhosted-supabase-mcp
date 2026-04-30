@@ -61,7 +61,7 @@ export const createBackupTool = {
         }
 
         // Ensure backup directory exists
-        const backupDir = path.join(context.workspacePath, 'backups');
+        const backupDir = path.join(context.workspacePath ?? '/tmp', 'backups');
         if (!fs.existsSync(backupDir)) {
             fs.mkdirSync(backupDir, { recursive: true });
         }

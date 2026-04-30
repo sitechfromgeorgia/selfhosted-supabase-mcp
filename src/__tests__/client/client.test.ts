@@ -155,7 +155,7 @@ describe('SelfhostedSupabaseClient', () => {
         test('returns success response for valid query', async () => {
             const expectedData = [{ id: 1, name: 'test' }];
             mockSupabaseClient.rpc.mockImplementation(() =>
-                Promise.resolve({ data: expectedData, error: null })
+                Promise.resolve({ data: expectedData, error: null } as any)
             );
 
             const client = await SelfhostedSupabaseClient.create(validOptions);
@@ -189,7 +189,7 @@ describe('SelfhostedSupabaseClient', () => {
                 callCount++;
                 if (callCount === 1) {
                     // Initialization check succeeds
-                    return Promise.resolve({ data: [], error: null });
+                    return Promise.resolve({ data: [], error: null } as any);
                 }
                 // Actual query fails
                 return Promise.resolve({
@@ -200,7 +200,7 @@ describe('SelfhostedSupabaseClient', () => {
                         details: 'Some details',
                         hint: 'Try something else',
                     },
-                });
+                } as any);
             });
 
             const client = await SelfhostedSupabaseClient.create(validOptions);
@@ -217,7 +217,7 @@ describe('SelfhostedSupabaseClient', () => {
                 Promise.resolve({
                     data: null,
                     error: { message: 'Function not found', code: '42883' },
-                })
+                } as any)
             );
 
             const client = await SelfhostedSupabaseClient.create({
@@ -240,9 +240,9 @@ describe('SelfhostedSupabaseClient', () => {
             mockSupabaseClient.rpc.mockImplementation(() => {
                 callCount++;
                 if (callCount === 1) {
-                    return Promise.resolve({ data: [], error: null });
+                    return Promise.resolve({ data: [], error: null } as any);
                 }
-                return Promise.resolve({ data: 'not an array', error: null });
+                return Promise.resolve({ data: 'not an array', error: null } as any);
             });
 
             const client = await SelfhostedSupabaseClient.create(validOptions);
@@ -276,7 +276,7 @@ describe('SelfhostedSupabaseClient', () => {
         test('returns success response for valid query', async () => {
             const expectedRows = [{ id: 1, name: 'test' }];
             mockPoolClient.query.mockImplementation(() =>
-                Promise.resolve({ rows: expectedRows })
+                Promise.resolve({ rows: expectedRows } as any)
             );
 
             const client = await SelfhostedSupabaseClient.create(validOptions);
@@ -360,20 +360,20 @@ describe('SelfhostedSupabaseClient', () => {
 
         test('rolls back transaction on failure', async () => {
             let beginCalled = false;
-            mockPoolClient.query.mockImplementation((query: string) => {
+            mockPoolClient.query.mockImplementation(((query: string) => {
                 if (query === 'BEGIN') {
                     beginCalled = true;
-                    return Promise.resolve({ rows: [] });
+                    return Promise.resolve({ rows: [] } as any);
                 }
                 if (query === 'ROLLBACK') {
-                    return Promise.resolve({ rows: [] });
+                    return Promise.resolve({ rows: [] } as any);
                 }
                 if (query === 'COMMIT') {
-                    return Promise.resolve({ rows: [] });
+                    return Promise.resolve({ rows: [] } as any);
                 }
                 // Fail on the actual operation
                 return Promise.reject(new Error('Insert failed'));
-            });
+            }) as any);
 
             const client = await SelfhostedSupabaseClient.create(validOptions);
 
@@ -412,12 +412,12 @@ describe('SelfhostedSupabaseClient', () => {
         });
 
         test('releases client after failed transaction', async () => {
-            mockPoolClient.query.mockImplementation((query: string) => {
+            mockPoolClient.query.mockImplementation(((query: string) => {
                 if (query === 'BEGIN' || query === 'ROLLBACK') {
-                    return Promise.resolve({ rows: [] });
+                    return Promise.resolve({ rows: [] } as any);
                 }
                 return Promise.reject(new Error('Failed'));
-            });
+            }) as any);
 
             const client = await SelfhostedSupabaseClient.create(validOptions);
 
@@ -437,7 +437,7 @@ describe('SelfhostedSupabaseClient', () => {
         test('exposes supabase client instance', async () => {
             const client = await SelfhostedSupabaseClient.create(validOptions);
             expect(client.supabase).toBeDefined();
-            expect(client.supabase).toBe(mockSupabaseClient);
+            expect(client.supabase).toBe(mockSupabaseClient as any);
         });
     });
 });

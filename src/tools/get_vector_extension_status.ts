@@ -31,7 +31,7 @@ export const getVectorExtensionStatusTool = {
     mcpInputSchema: mcpInputSchema,
     outputSchema: GetVectorExtensionStatusOutputSchema,
 
-    execute: async (input: typeof GetVectorExtensionStatusInputSchema._type, context: ToolContext) => {
+    execute: async (input: z.infer<typeof GetVectorExtensionStatusInputSchema>, context: ToolContext) => {
         const client = context.selfhostedClient;
 
         if (!client.isPgAvailable()) {

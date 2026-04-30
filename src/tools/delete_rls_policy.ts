@@ -49,20 +49,22 @@ export const deleteRlsPolicyTool = {
 
     execute: async (input: DeleteRlsPolicyInput, context: ToolContext) => {
         const client = context.selfhostedClient;
-        const { schema, table, policy_name, if_exists, dry_run } = input;
+        const { schema, table, policy_name, if_exists: ifExistsInput, dry_run } = input;
+        const resolvedSchema = schema || 'public';
+        const if_exists = ifExistsInput ?? true;
 
         if (!client.isPgAvailable()) {
             throw new Error('Direct database connection (DATABASE_URL) is required.');
         }
 
         validateIdentifiers([
-            { name: schema, context: 'Schema' },
+            { name: resolvedSchema, context: 'Schema' },
             { name: table, context: 'Table' },
             { name: policy_name, context: 'Policy name' },
         ]);
 
         const ifExistsClause = if_exists ? 'IF EXISTS ' : '';
-        const tableRef = `${quoteIdentifier(schema)}.${quoteIdentifier(table)}`;
+        const tableRef = `${quoteIdentifier(resolvedSchema)}.${quoteIdentifier(table)}`;
         const sql = `DROP POLICY ${ifExistsClause}${quoteIdentifier(policy_name)} ON ${tableRef};`;
 
         if (dry_run) {

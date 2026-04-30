@@ -198,7 +198,7 @@ describe('generateTypesTool', () => {
             const context = createMockContext(mockClient);
 
             const result = await generateTypesTool.execute(
-                { output_path: '/tmp/types.ts' },
+                { output_path: '/tmp/types.ts', included_schemas: ['public'], output_filename: 'database.types.ts' },
                 context
             );
 
@@ -212,7 +212,7 @@ describe('generateTypesTool', () => {
             const context = createMockContext(mockClient);
 
             const result = await generateTypesTool.execute(
-                { output_path: '/tmp/types.ts' },
+                { output_path: '/tmp/types.ts', included_schemas: ['public'], output_filename: 'database.types.ts' },
                 context
             );
 

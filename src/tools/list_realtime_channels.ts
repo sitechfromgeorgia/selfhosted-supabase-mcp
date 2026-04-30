@@ -24,7 +24,7 @@ const ChannelSchema = z.object({
 
 const ListRealtimeChannelsOutputSchema = z.object({
     success: z.boolean(),
-    channels: z.array(z.record(z.any())),
+    channels: z.array(z.record(z.string(), z.any())),
     count: z.number(),
 });
 

@@ -53,18 +53,19 @@ export const importCsvTool = {
     execute: async (input: ImportCsvInput, context: ToolContext) => {
         const client = context.selfhostedClient;
         const { schema, table, csv_content, has_header, columns, delimiter, dry_run } = input;
+        const resolvedSchema = schema || 'public';
 
         if (!client.isPgAvailable()) {
             throw new Error('Direct database connection (DATABASE_URL) is required.');
         }
 
         validateIdentifiers([
-            { name: schema, context: 'Schema' },
+            { name: resolvedSchema, context: 'Schema' },
             { name: table, context: 'Table' },
             ...(columns || []).map((c) => ({ name: c, context: 'Column' })),
         ]);
 
-        const tableRef = `${quoteIdentifier(schema)}.${quoteIdentifier(table)}`;
+        const tableRef = `${quoteIdentifier(resolvedSchema)}.${quoteIdentifier(table)}`;
 
         // Parse CSV rows
         const lines = csv_content.split('\n').filter((l) => l.trim().length > 0);

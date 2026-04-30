@@ -19,8 +19,8 @@ const UserToCreateSchema = z.object({
     password: z.string().min(6),
     role: z.string().optional().default('authenticated'),
     email_confirmed: z.boolean().optional().default(false),
-    user_metadata: z.record(z.any()).optional(),
-    app_metadata: z.record(z.any()).optional(),
+    user_metadata: z.record(z.string(), z.any()).optional(),
+    app_metadata: z.record(z.string(), z.any()).optional(),
 });
 
 const BulkCreateAuthUsersInputSchema = z.object({

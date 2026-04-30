@@ -14,7 +14,7 @@ import { validateIdentifiers, quoteIdentifier } from './ddl-utils.js';
 const BulkUpdateInputSchema = z.object({
     schema: z.string().optional().default('public'),
     table: z.string().describe('Table to update'),
-    set: z.record(z.any()).describe('Column values to set'),
+    set: z.record(z.string(), z.any()).describe('Column values to set'),
     where: z.string().min(1).describe('WHERE clause (required for safety)'),
     dry_run: z.boolean().optional().default(false),
 });
@@ -50,18 +50,19 @@ export const bulkUpdateTool = {
     execute: async (input: BulkUpdateInput, context: ToolContext) => {
         const client = context.selfhostedClient;
         const { schema, table, set, where, dry_run } = input;
+        const resolvedSchema = schema || 'public';
 
         if (!client.isPgAvailable()) {
             throw new Error('Direct database connection (DATABASE_URL) is required.');
         }
 
         validateIdentifiers([
-            { name: schema, context: 'Schema' },
+            { name: resolvedSchema, context: 'Schema' },
             { name: table, context: 'Table' },
             ...Object.keys(set).map((c) => ({ name: c, context: 'Column' })),
         ]);
 
-        const tableRef = `${quoteIdentifier(schema)}.${quoteIdentifier(table)}`;
+        const tableRef = `${quoteIdentifier(resolvedSchema)}.${quoteIdentifier(table)}`;
         const sets = Object.keys(set).map((col) => `${quoteIdentifier(col)} = $1`).join(', ');
         // Note: This simple implementation uses $1 for all values which won't work correctly for multiple columns
         // Let me fix this to use proper parameterization

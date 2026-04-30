@@ -42,7 +42,7 @@ export const getReplicationLagTool = {
     mcpInputSchema: mcpInputSchema,
     outputSchema: GetReplicationLagOutputSchema,
 
-    execute: async (input: typeof GetReplicationLagInputSchema._type, context: ToolContext) => {
+    execute: async (input: z.infer<typeof GetReplicationLagInputSchema>, context: ToolContext) => {
         const client = context.selfhostedClient;
 
         if (!client.isPgAvailable()) {

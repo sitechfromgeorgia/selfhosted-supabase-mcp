@@ -14,6 +14,7 @@ import { listStorageObjectsTool } from '../../tools/list_storage_objects.js';
 import {
     createMockClient,
     createMockContext,
+    createMockSupabaseClient,
     createSuccessResponse,
     createErrorResponse,
     testData,
@@ -44,9 +45,13 @@ describe('listStorageBucketsTool', () => {
 
     describe('execute', () => {
         test('returns list of buckets', async () => {
+            const mockSupabaseClient = createMockSupabaseClient({
+                storage: {
+                    listBuckets: mock(() => Promise.resolve({ data: testData.buckets, error: null })),
+                },
+            });
             const mockClient = createMockClient({
-                pgAvailable: true,
-                pgResult: createSuccessResponse(testData.buckets),
+                supabaseClient: mockSupabaseClient,
             });
             const context = createMockContext(mockClient);
 
@@ -58,6 +63,7 @@ describe('listStorageBucketsTool', () => {
         test('returns empty array when no buckets', async () => {
             const mockClient = createMockClient({
                 pgAvailable: true,
+                serviceRoleAvailable: false,
                 pgResult: createSuccessResponse([]),
             });
             const context = createMockContext(mockClient);
@@ -68,18 +74,29 @@ describe('listStorageBucketsTool', () => {
         });
 
         test('throws error when pg is not available', async () => {
-            const mockClient = createMockClient({ pgAvailable: false });
+            const mockSupabaseClient = createMockSupabaseClient({
+                storage: {
+                    listBuckets: mock(() => Promise.resolve({ data: null, error: { message: 'Storage API not available' } })),
+                },
+            });
+            const mockClient = createMockClient({ pgAvailable: false, supabaseClient: mockSupabaseClient });
             const context = createMockContext(mockClient);
 
             await expect(listStorageBucketsTool.execute({}, context)).rejects.toThrow(
-                'Direct database connection'
+                'Neither Supabase Storage API nor direct database connection (DATABASE_URL) is available. Cannot list storage buckets.'
             );
         });
 
         test('throws error on SQL failure', async () => {
+            const mockSupabaseClient = createMockSupabaseClient({
+                storage: {
+                    listBuckets: mock(() => Promise.resolve({ data: null, error: { message: 'Storage API not available' } })),
+                },
+            });
             const mockClient = createMockClient({
                 pgAvailable: true,
                 pgResult: createErrorResponse('relation "storage.buckets" does not exist', '42P01'),
+                supabaseClient: mockSupabaseClient,
             });
             const context = createMockContext(mockClient);
 
@@ -87,9 +104,15 @@ describe('listStorageBucketsTool', () => {
         });
 
         test('uses pg connection directly', async () => {
+            const mockSupabaseClient = createMockSupabaseClient({
+                storage: {
+                    listBuckets: mock(() => Promise.resolve({ data: null, error: { message: 'Storage API not available' } })),
+                },
+            });
             const mockClient = createMockClient({
                 pgAvailable: true,
                 pgResult: createSuccessResponse([]),
+                supabaseClient: mockSupabaseClient,
             });
             const context = createMockContext(mockClient);
 
@@ -200,20 +223,22 @@ describe('listStorageObjectsTool', () => {
 
     describe('execute', () => {
         test('returns list of objects', async () => {
-            const mockPgClient = {
-                query: mock(async () => ({ rows: testData.storageObjects })),
-            };
-
-            const mockClient = createMockClient({ pgAvailable: true });
-            (mockClient.executeTransactionWithPg as ReturnType<typeof mock>).mockImplementation(
-                async (callback: (client: unknown) => Promise<unknown>) => {
-                    return callback(mockPgClient);
-                }
-            );
+            const baseMock = createMockSupabaseClient();
+            const mockSupabaseClient = createMockSupabaseClient({
+                storage: {
+                    from: (_bucket: string) => ({
+                        ...baseMock.storage.from(''),
+                        list: mock(() => Promise.resolve({ data: testData.storageObjects, error: null })),
+                    }),
+                },
+            });
+            const mockClient = createMockClient({
+                supabaseClient: mockSupabaseClient,
+            });
             const context = createMockContext(mockClient);
 
             const result = await listStorageObjectsTool.execute(
-                { bucket_id: 'avatars' },
+                { bucket_id: 'avatars', limit: 100, offset: 0 },
                 context
             );
 
@@ -225,7 +250,7 @@ describe('listStorageObjectsTool', () => {
                 query: mock(async () => ({ rows: [] })),
             };
 
-            const mockClient = createMockClient({ pgAvailable: true });
+            const mockClient = createMockClient({ pgAvailable: true, serviceRoleAvailable: false });
             (mockClient.executeTransactionWithPg as ReturnType<typeof mock>).mockImplementation(
                 async (callback: (client: unknown) => Promise<unknown>) => {
                     return callback(mockPgClient);
@@ -234,7 +259,7 @@ describe('listStorageObjectsTool', () => {
             const context = createMockContext(mockClient);
 
             const result = await listStorageObjectsTool.execute(
-                { bucket_id: 'empty-bucket' },
+                { bucket_id: 'empty-bucket', limit: 100, offset: 0 },
                 context
             );
 
@@ -242,12 +267,21 @@ describe('listStorageObjectsTool', () => {
         });
 
         test('throws error when pg is not available', async () => {
-            const mockClient = createMockClient({ pgAvailable: false });
+            const baseMock = createMockSupabaseClient();
+            const mockSupabaseClient = createMockSupabaseClient({
+                storage: {
+                    from: (_bucket: string) => ({
+                        ...baseMock.storage.from(''),
+                        list: mock(() => Promise.resolve({ data: null, error: { message: 'Storage API not available' } })),
+                    }),
+                },
+            });
+            const mockClient = createMockClient({ pgAvailable: false, supabaseClient: mockSupabaseClient });
             const context = createMockContext(mockClient);
 
             await expect(
-                listStorageObjectsTool.execute({ bucket_id: 'test' }, context)
-            ).rejects.toThrow('Direct database connection');
+                listStorageObjectsTool.execute({ bucket_id: 'test', limit: 100, offset: 0 }, context)
+            ).rejects.toThrow('Neither Supabase Storage API nor direct database connection (DATABASE_URL) is available. Cannot list storage objects.');
         });
 
         test('uses transaction for parameterized query', async () => {
@@ -255,7 +289,16 @@ describe('listStorageObjectsTool', () => {
                 query: mock(async () => ({ rows: [] })),
             };
 
-            const mockClient = createMockClient({ pgAvailable: true });
+            const baseMock = createMockSupabaseClient();
+            const mockSupabaseClient = createMockSupabaseClient({
+                storage: {
+                    from: (_bucket: string) => ({
+                        ...baseMock.storage.from(''),
+                        list: mock(() => Promise.resolve({ data: null, error: { message: 'Storage API not available' } })),
+                    }),
+                },
+            });
+            const mockClient = createMockClient({ pgAvailable: true, supabaseClient: mockSupabaseClient });
             (mockClient.executeTransactionWithPg as ReturnType<typeof mock>).mockImplementation(
                 async (callback: (client: unknown) => Promise<unknown>) => {
                     return callback(mockPgClient);
@@ -263,7 +306,7 @@ describe('listStorageObjectsTool', () => {
             );
             const context = createMockContext(mockClient);
 
-            await listStorageObjectsTool.execute({ bucket_id: 'test' }, context);
+            await listStorageObjectsTool.execute({ bucket_id: 'test', limit: 100, offset: 0 }, context);
 
             expect(mockClient.executeTransactionWithPg).toHaveBeenCalled();
         });
@@ -280,7 +323,16 @@ describe('listStorageObjectsTool', () => {
                 }),
             };
 
-            const mockClient = createMockClient({ pgAvailable: true });
+            const baseMock = createMockSupabaseClient();
+            const mockSupabaseClient = createMockSupabaseClient({
+                storage: {
+                    from: (_bucket: string) => ({
+                        ...baseMock.storage.from(''),
+                        list: mock(() => Promise.resolve({ data: null, error: { message: 'Storage API not available' } })),
+                    }),
+                },
+            });
+            const mockClient = createMockClient({ pgAvailable: true, supabaseClient: mockSupabaseClient });
             (mockClient.executeTransactionWithPg as ReturnType<typeof mock>).mockImplementation(
                 async (callback: (client: unknown) => Promise<unknown>) => {
                     return callback(mockPgClient);
@@ -289,12 +341,12 @@ describe('listStorageObjectsTool', () => {
             const context = createMockContext(mockClient);
 
             await listStorageObjectsTool.execute(
-                { bucket_id: 'test', prefix: 'images/' },
+                { bucket_id: 'test', prefix: 'images/', limit: 100, offset: 0 },
                 context
             );
 
             expect(executedSql).toContain('LIKE');
-            expect(executedParams).toContain('images/%');
+            expect(executedParams).toContain('images/%}');
         });
     });
 

@@ -69,13 +69,14 @@ export const createVectorIndexTool = {
     execute: async (input: CreateVectorIndexInput, context: ToolContext) => {
         const client = context.selfhostedClient;
         const { schema, table, column, index_name, method, distance_metric, concurrently, if_not_exists, lists, ef_construction, ef_search, m, dry_run } = input;
+        const resolvedSchema = schema || 'public';
 
         if (!client.isPgAvailable()) {
             throw new Error('Direct database connection (DATABASE_URL) is required.');
         }
 
         validateIdentifiers([
-            { name: schema, context: 'Schema' },
+            { name: resolvedSchema, context: 'Schema' },
             { name: table, context: 'Table' },
             { name: column, context: 'Column' },
         ]);
@@ -89,7 +90,7 @@ export const createVectorIndexTool = {
         const idxName = index_name || `idx_${table}_${column}_${method}`;
         validateIdentifiers([{ name: idxName, context: 'Index name' }]);
 
-        const tableRef = `${quoteIdentifier(schema)}.${quoteIdentifier(table)}`;
+        const tableRef = `${quoteIdentifier(resolvedSchema)}.${quoteIdentifier(table)}`;
 
         let sql = `CREATE INDEX ${concurrently ? 'CONCURRENTLY ' : ''}${if_not_exists ? 'IF NOT EXISTS ' : ''}${quoteIdentifier(idxName)} ON ${tableRef} USING ${method} (${quoteIdentifier(column)} ${opsMap[distance_metric]})`;
 
@@ -116,7 +117,7 @@ export const createVectorIndexTool = {
             };
         }
 
-        context.log(`Creating ${method} index on ${schema}.${table}(${column})...`, 'info');
+        context.log(`Creating ${method} index on ${resolvedSchema}.${table}(${column})...`, 'info');
 
         if (setStmt) {
             const setResult = await client.executeSqlWithPg(setStmt);
@@ -134,7 +135,7 @@ export const createVectorIndexTool = {
         return {
             success: true,
             sql: setStmt + sql,
-            message: `Vector index ${idxName} created successfully on ${schema}.${table}(${column}).`,
+            message: `Vector index ${idxName} created successfully on ${resolvedSchema}.${table}(${column}).`,
         };
     },
 };

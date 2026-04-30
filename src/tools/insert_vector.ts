@@ -12,7 +12,7 @@ import { validateIdentifiers, quoteIdentifier } from './ddl-utils.js';
 const InsertVectorInputSchema = z.object({
     schema: z.string().optional().default('public'),
     table: z.string().describe('Target table'),
-    data: z.record(z.any()).describe('Column values including vector as number array'),
+    data: z.record(z.string(), z.any()).describe('Column values including vector as number array'),
     dry_run: z.boolean().optional().default(false),
 });
 
@@ -21,7 +21,7 @@ type InsertVectorInput = z.infer<typeof InsertVectorInputSchema>;
 const InsertVectorOutputSchema = z.object({
     success: z.boolean(),
     message: z.string(),
-    inserted: z.record(z.any()).optional(),
+    inserted: z.record(z.string(), z.any()).optional(),
 });
 
 const mcpInputSchema = {
@@ -46,18 +46,19 @@ export const insertVectorTool = {
     execute: async (input: InsertVectorInput, context: ToolContext) => {
         const client = context.selfhostedClient;
         const { schema, table, data, dry_run } = input;
+        const resolvedSchema = schema || 'public';
 
         if (!client.isPgAvailable()) {
             throw new Error('Direct database connection (DATABASE_URL) is required.');
         }
 
         validateIdentifiers([
-            { name: schema, context: 'Schema' },
+            { name: resolvedSchema, context: 'Schema' },
             { name: table, context: 'Table' },
             ...Object.keys(data).map((k) => ({ name: k, context: 'Column' })),
         ]);
 
-        const tableRef = `${quoteIdentifier(schema)}.${quoteIdentifier(table)}`;
+        const tableRef = `${quoteIdentifier(resolvedSchema)}.${quoteIdentifier(table)}`;
         const columns = Object.keys(data).map(quoteIdentifier);
         const values: any[] = [];
         const placeholders: string[] = [];

@@ -50,15 +50,15 @@ export const createStorageBucketTool = {
         const client = context.selfhostedClient;
         const { name, public: isPublic, file_size_limit, allowed_mime_types, dry_run } = input;
 
-        const srClient = client.getServiceRoleClient();
-        if (!srClient) {
-            throw new Error('Service role key is required for storage bucket creation.');
-        }
-
-        // Validate bucket name
+        // Validate bucket name first (before service role check)
         const bucketNameRegex = /^[a-z0-9._-]+$/i;
         if (!bucketNameRegex.test(name)) {
             throw new Error(`Invalid bucket name "${name}". Use only a-z, 0-9, ., _, and -.`);
+        }
+
+        const srClient = client.getServiceRoleClient();
+        if (!srClient) {
+            throw new Error('Service role key is required for storage bucket creation.');
         }
 
         if (dry_run) {
@@ -77,7 +77,7 @@ export const createStorageBucketTool = {
         if (file_size_limit !== undefined) options.fileSizeLimit = file_size_limit;
         if (allowed_mime_types !== undefined) options.allowedMimeTypes = allowed_mime_types;
 
-        const { data, error } = await srClient.storage.createBucket(name, options);
+        const { data, error } = await srClient.storage.createBucket(name, options as any);
 
         if (error) {
             throw new Error(`Failed to create bucket: ${error.message}`);

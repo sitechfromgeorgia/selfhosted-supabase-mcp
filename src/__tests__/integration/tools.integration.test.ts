@@ -55,8 +55,8 @@ describe.skipIf(!hasCredentials)('Tools Integration Tests', () => {
 
     describe('Simple getter tools', () => {
         test('get_project_url returns configured URL', async () => {
-            const result = await getProjectUrlTool.execute({}, context);
-            expect(result.project_url).toBe(process.env.SUPABASE_URL);
+            const result = await getProjectUrlTool.execute({} as any, context);
+            expect(result.project_url).toBe(process.env.SUPABASE_URL as any);
         });
 
         test('verify_jwt_secret returns status', async () => {
@@ -118,7 +118,7 @@ describe.skipIf(!hasCredentials)('Tools Integration Tests', () => {
             );
 
             expect(Array.isArray(result)).toBe(true);
-            expect(result[0]?.value).toBe(1);
+            expect((result[0] as any)?.value).toBe(1);
         });
 
         test('execute_sql handles complex queries', async () => {
@@ -137,14 +137,14 @@ describe.skipIf(!hasCredentials)('Tools Integration Tests', () => {
             );
 
             expect(Array.isArray(result)).toBe(true);
-            expect(result[0]?.name).toBe('test');
-            expect(result[0]?.number).toBe(42);
+            expect((result[0] as any)?.name).toBe('test');
+            expect((result[0] as any)?.number).toBe(42);
         });
 
         test('execute_sql returns error for invalid SQL', async () => {
             await expect(
                 executeSqlTool.execute(
-                    { sql: 'INVALID SQL STATEMENT' },
+                    { sql: 'INVALID SQL STATEMENT', read_only: false },
                     context
                 )
             ).rejects.toThrow('SQL Error');
